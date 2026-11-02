@@ -186,13 +186,16 @@ const filtros = products.filter(p => p.category === 'filtro');
     .rule i{width:.5rem;height:.5rem;background:currentColor;transform:rotate(45deg)}
     .label{background:var(--cream);border-radius:1.25rem;padding:1.75rem 1.5rem;text-align:center;outline:1.5px solid var(--accent,var(--purple));outline-offset:-.6rem}
 
-    .hero{position:relative;display:grid;place-items:center;padding:4rem 1rem 5rem;background:var(--orange);overflow:hidden}
-    .sunburst{position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg at 50% 62%,var(--sun) 0 6deg,var(--orange) 6deg 12deg);opacity:.85}
-    .hero-label{--accent:var(--purple);position:relative;max-width:30rem;width:100%;padding:2.25rem 1.75rem;border-radius:12rem 12rem 1.25rem 1.25rem;padding-top:4rem}
-    .hero-label::before{content:"";position:absolute;top:-1.4rem;left:50%;translate:-50% 0;width:6rem;height:3.4rem;border-radius:6rem 6rem 0 0;background:var(--sun)}
-    h1{font-size:clamp(3.2rem,12vw,5.5rem);color:var(--orange);margin:.4rem 0}
-    .lead{font-family:Fraunces,serif;font-style:italic;font-size:1.15rem;margin-bottom:.8rem}
-    .meta{font-size:.85rem;font-weight:600;color:var(--green);margin-bottom:1.25rem}
+    .hero{position:relative;isolation:isolate;display:grid;place-items:center;min-height:31rem;padding:5rem 1.25rem;overflow:hidden;background:#183b3b;color:var(--cream)}
+    .sunburst{position:absolute;z-index:-1;width:min(64rem,110vw);aspect-ratio:1;left:50%;top:50%;translate:-50% -50%;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 3.2rem,rgba(127,209,199,.16) 3.25rem 3.32rem);opacity:.9}
+    .hero-label{--accent:var(--teal);position:relative;max-width:42rem;width:100%;padding:1.5rem;text-align:center;background:transparent;border:0;outline:0;color:var(--cream)}
+    .hero-label::before{display:none}
+    .hero h1{font-size:clamp(4rem,13vw,7.5rem);color:var(--cream);letter-spacing:-.045em;margin:.55rem 0; text-wrap:balance}
+    .hero .small{color:var(--teal)}
+    .hero .rule{color:var(--sun);max-width:18rem;margin:1rem auto}
+    .lead{font-family:Fraunces,serif;font-style:italic;font-size:clamp(1.1rem,2vw,1.3rem);max-width:34rem;margin:0 auto .8rem}
+    .meta{font-size:.85rem;font-weight:600;color:var(--teal);margin-bottom:1.25rem}
+    .hero .btn{background:var(--sun);color:var(--ink)}
 
     .btn{display:inline-block;background:var(--ink);color:var(--cream);border:0;border-radius:99px;padding:.7rem 1.4rem;font:600 .95rem Archivo;text-decoration:none;cursor:pointer}
     .btn:hover{background:var(--wine)}
@@ -237,8 +240,9 @@ const filtros = products.filter(p => p.category === 'filtro');
     }
 
     .simple-card{display:flex;flex-direction:column;gap:.6rem;padding:1.5rem;border-radius:1.25rem;border:1.5px solid currentColor}
-    .product-photo{width:9rem;height:9rem;flex:0 0 auto;margin:0 auto .7rem;border-radius:50%;overflow:hidden;background:var(--cream);padding:.45rem}
-    .product-photo img{width:100%;height:100%;object-fit:contain}
+    .product-photo{width:9rem;height:9rem;flex:0 0 auto;margin:0 auto .7rem;border-radius:50%;overflow:hidden;background:#fff;padding:0}
+    .product-photo img{width:100%;height:100%;object-fit:contain;transform:scale(1.18)}
+    @media (min-width:700px){.product-photo{width:15rem;height:15rem}}
     .simple-card h3{font-size:1.6rem}
     .simple-card p{font-size:.95rem;max-width:34ch}
     .alt .btn{background:var(--sun);color:var(--ink)}
