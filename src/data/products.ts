@@ -27,7 +27,7 @@ export const products: Product[] = [
     expectation: 'Su proceso hace que esos aromas sean muy atractivos y, en taza, la experiencia se convierte para nosotros en un viaje sin regreso. Nos parece un café expresivo y envolvente; te invitamos a descubrir qué despierta en ti.', producer: 'Marlon Bolaños',
     farm: 'The Three Coffee Farmers', origin: 'San Agustín, Huila · 1.700 msnm' },
 
-  { id: 'kalita', category: 'metodo', name: 'Kalita Wave', price: 120000, img: '/img/kalita-wave.jpg', note: 'Dripper de fondo plano para una taza dulce y pareja.' },
+  { id: 'kalita', category: 'metodo', name: 'Kalita Wave 155', price: 120000, img: '/img/kalita-wave.jpg', note: 'Dripper de fondo plano tamaño 155, pensado para una extracción pareja.' },
 
   { id: 'cafec-abaca', category: 'filtro', name: 'Cafec Abaca V60', price: 30000, img: '/img/cafec-abaca.png', note: 'Filtro de papel de abacá para V60.' },
   { id: 'kalita-155', category: 'filtro', name: 'Kalita Wave 155', price: 25000, img: '/img/kalita-wave-155.webp', note: 'Filtros de papel para Kalita Wave tamaño 155.' },
