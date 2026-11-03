@@ -46,7 +46,7 @@ const filtros = products.filter(p => p.category === 'filtro');
       <div class="grid cafes">
         {cafes.map(p => (
           <article class={`card cafe ${p.theme}`}>
-            <div class="photo"><img src={p.img} alt={`Bolsa de café ${p.name}`} loading="lazy" /></div>
+            <div class="photo"><img src={p.img} alt={p.gallery ? `${p.name} servido junto a su empaque` : `Bolsa de café ${p.name}`} loading="lazy" /></div>
             <div class="label">
               <p class="small">{p.tag}</p>
               <h3>{p.name}</h3>
