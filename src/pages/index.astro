@@ -144,7 +144,7 @@ const filtros = products.filter(p => p.category === 'filtro');
       $('#lines').innerHTML = ids.map(id => {
         const p = products.find(x => x.id === id); const q = cart[id];
         total += p.price * q; count += q;
-        return `<li><span>${p.name}${p.category === 'cafe' ? ' · 250 g' : ''}</span>
+        return `<li><img class="cart-thumb" src="${p.img}" alt="${p.name}" /><span class="cart-product">${p.name}${p.category === 'cafe' ? ' · 250 g' : ''}</span>
           <span class="qty"><button data-d="-1" data-id="${id}" aria-label="Quitar uno">−</button><b>${q}</b><button data-d="1" data-id="${id}" aria-label="Agregar uno">+</button></span>
           <span>${fmt(p.price * q)}</span></li>`;
       }).join('');
@@ -281,7 +281,9 @@ const filtros = products.filter(p => p.category === 'filtro');
     .cart-head h2{font-size:1.8rem}
     .cart-head button{background:none;border:0;font:600 .9rem Archivo;text-decoration:underline;cursor:pointer}
     #lines{list-style:none;padding:0}
-    #lines li{display:grid;grid-template-columns:1fr auto auto;gap:.8rem;align-items:center;padding:.7rem 0;border-bottom:1px solid #0002;font-size:.92rem}
+    #lines li{display:grid;grid-template-columns:3.25rem minmax(0,1fr) auto auto;gap:.65rem;align-items:center;padding:.7rem 0;border-bottom:1px solid #0002;font-size:.92rem}
+    .cart-thumb{display:block;width:3.25rem;height:3.25rem;object-fit:cover;border-radius:.55rem;background:#fff}
+    .cart-product{min-width:0;font-weight:600;line-height:1.25}
     .qty{display:flex;align-items:center;gap:.5rem}
     .qty button{width:1.8rem;height:1.8rem;border-radius:50%;border:1.5px solid var(--ink);background:none;cursor:pointer;font-size:1rem}
     .total{display:flex;justify-content:space-between;margin:1.25rem 0;font-family:Fraunces,serif;font-size:1.4rem}
