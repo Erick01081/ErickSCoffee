@@ -2,6 +2,7 @@
 import { config } from '../data/config';
 import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 ---
 <!doctype html>
 <html lang="es">
@@ -18,6 +19,7 @@ import Analytics from '@vercel/analytics/astro';
 <body>
   <PageTransition />
   <Analytics />
+  <SpeedInsights />
   <header class="top">
     <a class="logo" href="/#top" aria-label={config.brand}><img src="/opposite-logo.svg" alt="ØPPOSITE" /></a>
     <button class="menu-toggle" id="nav-toggle" aria-label="Abrir menú" aria-controls="main-nav" aria-expanded="false"><span></span><span></span><span></span></button>

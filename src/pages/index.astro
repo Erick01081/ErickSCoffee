@@ -3,6 +3,7 @@ import { products } from '../data/products';
 import { config } from '../data/config';
 import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 const cop = (n: number) => '$' + n.toLocaleString('es-CO');
 const cafes = products.filter(p => p.category === 'cafe');
 const metodos = products.filter(p => p.category === 'metodo');
@@ -23,6 +24,7 @@ const filtros = products.filter(p => p.category === 'filtro');
 <body>
   <PageTransition />
   <Analytics />
+  <SpeedInsights />
   <header class="top">
     <a class="logo" href="#top" aria-label={config.brand}><img src="/opposite-logo.svg" alt="ØPPOSITE" /></a>
     <button class="menu-toggle" id="nav-toggle" aria-label="Abrir menú" aria-controls="main-nav" aria-expanded="false"><span></span><span></span><span></span></button>
