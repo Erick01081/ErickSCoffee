@@ -179,6 +179,10 @@ const filtros = products.filter(p => p.category === 'filtro');
       window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
     };
     render();
+    if (new URLSearchParams(location.search).get('openCart') === '1') {
+      dlg.showModal();
+      history.replaceState(null, '', '/#cafes');
+    }
   </script>
 
   <style is:global>
