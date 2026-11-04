@@ -36,7 +36,9 @@ const gallery = coffee.gallery?.length ? coffee.gallery : [coffee.img];
       <div class="coffee-gallery" role="region" aria-roledescription="carrusel" aria-label={`Galería de ${coffee.name}`}>
         <div class="coffee-image" id="coffee-gallery-track">
           {gallery.map((image, index) => <figure class="coffee-slide" aria-hidden={index !== 0}>
-            <img src={image} alt={index === 0 && coffee.gallery?.length ? `${coffee.name} servido junto a su empaque` : `Empaque de ${coffee.name}`} loading={index === 0 ? 'eager' : 'lazy'} />
+            <button class="gallery-open" type="button" aria-label={`Ampliar imagen de ${coffee.name}`}>
+              <img src={image} alt={index === 0 && coffee.gallery?.length ? `${coffee.name} servido junto a su empaque` : `Empaque de ${coffee.name}`} loading={index === 0 ? 'eager' : 'lazy'} />
+            </button>
           </figure>)}
         </div>
         {gallery.length > 1 && <>
@@ -87,8 +89,46 @@ const gallery = coffee.gallery?.length ? coffee.gallery : [coffee.img];
     </section>
   </main>
   <footer><p>{config.brand} · {config.shipping}</p></footer>
+  <dialog class="photo-lightbox" aria-label={`Imagen ampliada de ${coffee.name}`}>
+    <button class="lightbox-close" type="button" aria-label="Cerrar imagen ampliada">×</button>
+    <div class="lightbox-view"><img class="lightbox-image" alt="" /></div>
+    <div class="lightbox-controls" aria-label="Controles de zoom">
+      <button type="button" data-zoom="out" aria-label="Alejar">−</button>
+      <button type="button" data-zoom="reset" aria-label="Restablecer zoom">Ajustar</button>
+      <button type="button" data-zoom="in" aria-label="Acercar">+</button>
+    </div>
+  </dialog>
 
   <script is:inline>
+    const lightbox = document.querySelector('.photo-lightbox');
+    const lightboxImage = document.querySelector('.lightbox-image');
+    const lightboxView = document.querySelector('.lightbox-view');
+    let zoom = 1;
+    function sizeLightboxImage() {
+      if (!lightboxImage.naturalWidth) return;
+      const ratio = lightboxImage.naturalWidth / lightboxImage.naturalHeight;
+      const baseWidth = Math.min(window.innerWidth * .88, window.innerHeight * .76 * ratio);
+      lightboxImage.style.width = `${baseWidth * zoom}px`;
+    }
+    document.querySelectorAll('.gallery-open').forEach(button => button.addEventListener('click', () => {
+      const source = button.querySelector('img');
+      lightboxImage.onload = sizeLightboxImage;
+      lightboxImage.src = source.currentSrc || source.src;
+      lightboxImage.alt = source.alt;
+      zoom = 1;
+      sizeLightboxImage();
+      lightbox.showModal();
+    }));
+    document.querySelector('.lightbox-close').addEventListener('click', () => lightbox.close());
+    document.querySelectorAll('[data-zoom]').forEach(button => button.addEventListener('click', () => {
+      const action = button.dataset.zoom;
+      zoom = action === 'reset' ? 1 : Math.min(3, Math.max(1, zoom + (action === 'in' ? .5 : -.5)));
+      sizeLightboxImage();
+      if (zoom === 1) lightboxView.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    }));
+    lightbox.addEventListener('click', event => { if (event.target === lightbox) lightbox.close(); });
+    window.addEventListener('resize', sizeLightboxImage);
+
     const galleryTrack = document.querySelector('#coffee-gallery-track');
     if (galleryTrack) {
       const slides = [...galleryTrack.querySelectorAll('.coffee-slide')];
@@ -128,6 +168,8 @@ const gallery = coffee.gallery?.length ? coffee.gallery : [coffee.img];
     .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:1rem;padding:.6rem 1.25rem;background:var(--night);color:var(--cream)}.logo{display:flex;align-items:center;text-decoration:none;white-space:nowrap}.logo img{display:block;width:8.1rem;height:auto}.top nav{position:absolute;left:50%;translate:-50% 0;display:flex;gap:1.25rem;margin:0;white-space:nowrap}.top nav a{text-decoration:none}.top .cartbtn{margin-left:auto}.cartbtn{background:var(--sun);color:var(--ink);border:0;border-radius:99px;padding:.45rem 1rem;font:600 .9rem Archivo;text-decoration:none}.menu-toggle{display:none}
     main{max-width:72rem;margin:auto;padding:1.25rem}.back{display:inline-block;margin:1.25rem 0;text-decoration:none;font-weight:600}.coffee-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2.5rem;align-items:center;padding:clamp(1.25rem,5vw,4rem);border-radius:1.5rem;background:var(--orange)}.coffee-hero.arco{background:var(--night);color:var(--cream)}.coffee-hero.olas{background:var(--wine);color:var(--cream)}
     .coffee-gallery{position:relative;min-width:0}.coffee-image{display:flex;height:clamp(18rem,42vw,31rem);border-radius:1rem;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;background:var(--cream);overscroll-behavior-x:contain}.coffee-image::-webkit-scrollbar{display:none}.coffee-slide{position:relative;flex:0 0 100%;min-width:100%;height:100%;scroll-snap-align:start}.coffee-slide img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}.gallery-arrow{position:absolute;top:50%;translate:0 -50%;display:grid;place-items:center;width:2.6rem;height:2.6rem;border:0;border-radius:50%;background:rgba(12,12,12,.78);color:white;font:2rem/1 Archivo;cursor:pointer}.gallery-prev{left:.75rem}.gallery-next{right:.75rem}.gallery-dots{position:absolute;bottom:.8rem;left:50%;translate:-50% 0;display:flex;gap:.45rem;padding:.35rem .55rem;border-radius:99px;background:rgba(12,12,12,.62)}.gallery-dot{width:.5rem;height:.5rem;padding:0;border:0;border-radius:50%;background:#ffffff80;cursor:pointer}.gallery-dot.active{background:white;transform:scale(1.2)}.coffee-mark{display:block;width:3rem;height:3rem;margin-bottom:.7rem;background:var(--coffee-mark);mask:url('/opposite-mark.svg') center/contain no-repeat;-webkit-mask:url('/opposite-mark.svg') center/contain no-repeat}.coffee-copy .small,.story .small,.next-coffee .small{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--green)}.coffee-hero.sol .coffee-copy .small{color:var(--ink)}.coffee-hero.arco .small,.coffee-hero.olas .small{color:var(--sun)}h1{font-size:clamp(2.8rem,6vw,5rem);margin:.6rem 0}.origin{font-size:.9rem;font-weight:600}.rule{display:flex;align-items:center;gap:.6rem;margin:1rem 0;color:var(--purple)}.rule:before,.rule:after{content:"";height:1px;flex:1;background:currentColor}.rule i{width:.5rem;height:.5rem;background:currentColor;transform:rotate(45deg)}.coffee-copy>p:not(.small){margin:.75rem 0}.price{font:800 1.6rem "Source Serif 4",Georgia,serif;margin:1.25rem 0!important}.price small{font:400 .8rem Archivo,sans-serif}.btn{display:inline-block;background:var(--ink);color:var(--cream);border:0;border-radius:99px;padding:.75rem 1.35rem;font:600 .95rem Archivo;text-decoration:none}.coffee-hero.arco .btn,.coffee-hero.olas .btn{background:var(--sun);color:var(--ink)}
+    .gallery-open{display:block;width:100%;height:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.gallery-open:focus-visible{outline:3px solid var(--sun);outline-offset:-5px}
+    .photo-lightbox{position:fixed;inset:0;margin:auto;width:min(96vw,90rem);height:min(96dvh,60rem);max-width:none;max-height:none;padding:3.5rem 1rem 5rem;border:0;border-radius:1rem;background:rgba(12,12,12,.97);color:white;overflow:hidden}.photo-lightbox::backdrop{background:rgba(0,0,0,.82)}.lightbox-view{width:100%;height:100%;overflow:auto;display:grid;place-items:center;overscroll-behavior:contain}.lightbox-image{display:block;width:auto;height:auto;max-width:none;max-height:none;object-fit:contain}.lightbox-close{position:absolute;top:.8rem;right:1rem;width:2.6rem;height:2.6rem;border:1px solid #ffffff70;border-radius:50%;background:#ffffff14;color:white;font:2rem/1 Archivo;cursor:pointer}.lightbox-controls{position:absolute;bottom:.8rem;left:50%;translate:-50% 0;display:flex;align-items:center;gap:.4rem;padding:.35rem;border:1px solid #ffffff40;border-radius:99px;background:#171411}.lightbox-controls button{min-width:2.5rem;height:2.5rem;padding:0 .7rem;border:0;border-radius:99px;background:transparent;color:white;font:600 1.1rem Archivo;cursor:pointer}.lightbox-controls button:hover{background:#ffffff20}.lightbox-controls button[data-zoom="reset"]{font-size:.8rem}
     .story{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;padding:4rem 0}.story article{padding:clamp(1.5rem,4vw,2.5rem);border:1.5px solid var(--ink);border-radius:1.25rem}.story h2{font-size:clamp(1.7rem,3vw,2.4rem);margin:.5rem 0 1rem}.story article>p:last-child{max-width:55ch}.open-guide{display:flex;align-items:center;gap:1.5rem;padding:clamp(1.5rem,5vw,3rem);background:var(--teal);border-radius:1.25rem}.guide-mark{width:3.5rem;height:3.5rem;flex:0 0 3.5rem;background:var(--green);clip-path:polygon(50% 0,58% 33%,82% 18%,67% 42%,100% 50%,67% 58%,82% 82%,58% 67%,50% 100%,42% 67%,18% 82%,33% 58%,0 50%,33% 42%,18% 18%,42% 33%)}.open-guide h2{font-size:clamp(1.5rem,3vw,2rem);margin-bottom:.65rem}.open-guide p{max-width:70ch}.next-coffee{display:flex;align-items:center;justify-content:space-between;padding:3rem 0}.next-coffee a{font:700 1.25rem "Source Serif 4",Georgia,serif}footer{padding:2rem 1.25rem;text-align:center;font-size:.85rem;background:var(--night);color:var(--cream)}
     @media(max-width:650px){.top{gap:.55rem;padding:.6rem .7rem}.logo img{width:6.7rem}.menu-toggle{display:grid;place-content:center;gap:4px;width:2.2rem;height:2.2rem;flex:0 0 auto;border:1px solid #efe6d255;border-radius:50%;background:transparent;color:var(--cream);cursor:pointer}.menu-toggle span{display:block;width:1rem;height:2px;background:currentColor;transition:transform .2s,opacity .2s}.top.menu-open .menu-toggle span:first-child{transform:translateY(6px) rotate(45deg)}.top.menu-open .menu-toggle span:nth-child(2){opacity:0}.top.menu-open .menu-toggle span:last-child{transform:translateY(-6px) rotate(-45deg)}.top nav{display:none;position:absolute;left:0;right:0;top:100%;translate:0 0;width:100%;flex-direction:column;gap:0;padding:.4rem 1rem .8rem;background:var(--night);white-space:normal}.top.menu-open nav{display:flex}.top nav a{padding:.75rem .25rem;font-size:.95rem;border-top:1px solid #efe6d233}.top .cartbtn{margin-left:auto;padding:.4rem .7rem;font-size:.78rem;white-space:nowrap}.coffee-hero{grid-template-columns:1fr;gap:1.5rem}.coffee-image{height:19rem}.story{grid-template-columns:1fr;padding:2.5rem 0}.next-coffee{align-items:flex-start;flex-direction:column;gap:.5rem}}
   </style>
