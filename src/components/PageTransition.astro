@@ -1,0 +1,40 @@
+<div class="page-transition" aria-hidden="true">
+  <img src="/opposite-transition-mark.svg" alt="" />
+</div>
+
+<script is:inline>
+  const transitionKey = 'opposite-page-transition';
+  const transitionRoot = document.documentElement;
+  const transitionMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  try {
+    if (sessionStorage.getItem(transitionKey) === '1') {
+      sessionStorage.removeItem(transitionKey);
+      transitionRoot.classList.add('transition-arriving');
+      requestAnimationFrame(() => requestAnimationFrame(() => transitionRoot.classList.remove('transition-arriving')));
+    }
+  } catch {}
+
+  document.addEventListener('click', event => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || transitionRoot.classList.contains('transition-leaving')) return;
+    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!anchor || anchor.hasAttribute('download') || (anchor.target && anchor.target !== '_self')) return;
+
+    const destination = new URL(anchor.href, location.href);
+    if (destination.origin !== location.origin || destination.pathname === location.pathname) return;
+
+    event.preventDefault();
+    try { sessionStorage.setItem(transitionKey, '1'); } catch {}
+    transitionRoot.classList.add('transition-leaving');
+    window.setTimeout(() => location.assign(destination.href), transitionMotion ? 0 : 320);
+  }, true);
+</script>
+
+<style is:global>
+  .page-transition{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:radial-gradient(circle at center,#163d38 0,#0b2522 68%);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .26s ease,visibility 0s linear .26s}
+  .page-transition img{display:block;width:clamp(4rem,10vw,7rem);height:auto;opacity:0;transform:scale(.72) rotate(-12deg);transition:opacity .22s ease,transform .32s cubic-bezier(.2,.8,.2,1)}
+  .transition-leaving .page-transition,.transition-arriving .page-transition{opacity:1;visibility:visible;transition:opacity .24s ease}
+  .transition-leaving .page-transition img,.transition-arriving .page-transition img{opacity:1;transform:scale(1) rotate(0)}
+  .transition-arriving .page-transition{transition:none}
+  @media(prefers-reduced-motion:reduce){.page-transition,.page-transition img{transition-duration:.01ms!important}}
+</style>
