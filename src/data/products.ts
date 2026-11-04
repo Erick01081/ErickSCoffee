@@ -12,7 +12,7 @@ export type Product = {
 
 export const products: Product[] = [
   { id: 'ombligon', category: 'cafe', theme: 'sol', logoColor: '#17402F', name: 'Ombligón Amarillo', price: 60000,
-    img: '/img/ombligon.webp', tag: 'El de las sobremesas que se alargan', process: 'Natural',
+    img: '/img/ombligon-served.webp', gallery: ['/img/ombligon-served.webp', '/img/ombligon.webp'], tag: 'El de las sobremesas que se alargan', process: 'Natural',
     why: 'El Ombligón Amarillo nos pareció único: es sumamente expresivo, muy dulce y fácil de beber, con un retrogusto que pocas veces hemos experimentado. Jhonatan y Johanny están al frente de la finca Nuevo Sol, buscando procesos innovadores; este café es un gran ejemplo de esa búsqueda.',
     expectation: 'Esperamos una taza muy dulce y expresiva, pero nada empalagosa. Es un café fácil de disfrutar y con un retrogusto que invita a quedarse un rato más. Esta es nuestra impresión; descubre tú tus propios matices.',
     producer: 'Jhonatan Nieto & Johanny González',
