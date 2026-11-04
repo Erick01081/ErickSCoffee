@@ -233,9 +233,9 @@ const filtros = products.filter(p => p.category === 'filtro');
     .cafe.arco{--bg:var(--night);--accent:var(--pink)}
     .cafe.olas{--bg:var(--wine);--accent:var(--wine)}
     .cafe.sol .rule{color:var(--orange)} .cafe.arco .rule{color:var(--green)}
-    .photo{aspect-ratio:4/4.4;overflow:hidden}
-    .photo img{width:100%;height:100%;object-fit:cover;object-position:52% 50%;transform:scale(1.55);transform-origin:52% 52%}
-    .cafe .label{margin:-2.5rem .75rem .75rem;position:relative;flex:1;display:flex;flex-direction:column}
+    .photo{aspect-ratio:5/4;overflow:hidden;background:var(--bg)}
+    .photo img{display:block;width:100%;height:100%;object-fit:contain;object-position:center}
+    .cafe .label{margin:.75rem .75rem .75rem;position:relative;flex:1;display:flex;flex-direction:column}
     .cafe h3{font-size:2rem;color:var(--accent);margin-top:.35rem}
     .cafe.sol h3{color:var(--orange)}
     dl{display:grid;gap:.1rem}
