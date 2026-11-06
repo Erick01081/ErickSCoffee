@@ -1,5 +1,11 @@
 import type { APIRoute } from 'astro';
-import { MP_ACCESS_TOKEN, MP_ENVIRONMENT, PUBLIC_SITE_URL } from 'astro:env/server';
+import {
+  MP_ACCESS_TOKEN,
+  MP_ENVIRONMENT,
+  PUBLIC_SITE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
+  SUPABASE_URL,
+} from 'astro:env/server';
 import { randomUUID } from 'node:crypto';
 import { products } from '../../../data/products';
 import { colombianDepartments, shippingPrice } from '../../../data/locations';
@@ -18,6 +24,43 @@ const json = (body: Record<string, unknown>, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
   });
+
+function supabaseRestUrl(path: string) {
+  const baseUrl = (SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+  return `${baseUrl}/rest/v1/${path}`;
+}
+
+async function saveCheckout(externalReference: string, checkoutData: Record<string, unknown>) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase is not configured');
+  }
+
+  const response = await fetch(`${supabaseRestUrl('mercadopago_orders')}?on_conflict=mercadopago_order_id`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify({
+      mercadopago_order_id: externalReference,
+      external_reference: externalReference,
+      status: 'pending',
+      currency_id: 'COP',
+      order_data: { checkout: checkoutData },
+      checkout_data: checkoutData,
+      subtotal_amount: checkoutData.subtotal,
+      shipping_amount: checkoutData.shipping,
+      total_amount: checkoutData.total,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Supabase insert failed (${response.status}): ${error.slice(0, 300)}`);
+  }
+}
 
 export const POST: APIRoute = async ({ request, url }) => {
   if (!['test', 'production'].includes(MP_ENVIRONMENT || '')) {
@@ -70,6 +113,8 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   const preferenceItems: Array<{ title: string; quantity: number; unit_price: number; currency_id: string }> = [];
+  const checkoutItems: Array<Record<string, unknown>> = [];
+  let subtotal = 0;
 
   for (const entry of input.items) {
     if (typeof entry.key !== 'string' || !Number.isInteger(entry.quantity) || Number(entry.quantity) < 1 || Number(entry.quantity) > 10) {
@@ -103,6 +148,19 @@ export const POST: APIRoute = async ({ request, url }) => {
       unit_price: Number(unitPrice), // En preferencias debe ser número entero en COP
       currency_id: 'COP',
     });
+    checkoutItems.push({
+      key: entry.key,
+      product_id: product.id,
+      product_name: product.name,
+      category: product.category,
+      size: product.category === 'cafe' ? selectedSize || '250' : null,
+      grind: product.category === 'cafe' ? selectedGrind || 'bean' : null,
+      title,
+      quantity,
+      unit_price: Number(unitPrice),
+      amount: Number(unitPrice) * quantity,
+    });
+    subtotal += Number(unitPrice) * quantity;
   }
 
   const deliveryFee = shippingPrice(department, city);
@@ -112,6 +170,22 @@ export const POST: APIRoute = async ({ request, url }) => {
     unit_price: Number(deliveryFee),
     currency_id: 'COP',
   });
+  const total = subtotal + Number(deliveryFee);
+  const externalReference = randomUUID();
+  const checkoutData = {
+    buyer: { name, email, department, city, address, phone, identification },
+    items: checkoutItems,
+    subtotal,
+    shipping: Number(deliveryFee),
+    total,
+  };
+
+  try {
+    await saveCheckout(externalReference, checkoutData);
+  } catch (error) {
+    console.error('Could not save checkout data', error);
+    return json({ error: 'No pudimos guardar los datos del pedido. Inténtalo de nuevo.' }, 503);
+  }
 
   const firstName = name.split(/\s+/)[0];
   const lastName = name.split(/\s+/).slice(1).join(' ') || undefined;
@@ -119,7 +193,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   // Estructura oficial para Preferences API (Checkout Pro)
   const preferencePayload = {
-    external_reference: randomUUID(),
+    external_reference: externalReference,
     items: preferenceItems,
     payer: {
       name: firstName,
