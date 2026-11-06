@@ -1,6 +1,7 @@
 ---
 import { products } from '../data/products';
 import { config } from '../data/config';
+import { colombianDepartments, commonMunicipalities } from '../data/locations';
 import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
@@ -149,10 +150,22 @@ const filtros = products.filter(p => p.category === 'filtro');
     <form method="dialog" class="cart-head"><h2>Tu pedido</h2><button aria-label="Cerrar">Cerrar</button></form>
     <ul id="lines"></ul>
     <p id="empty">Aún no has agregado nada.</p>
+    <div class="shipping-row"><span>Productos</span><strong id="subtotal">$0</strong></div>
+    <div class="shipping-row"><span>Envío <small id="shipping-destination"></small></span><strong id="shipping-fee">—</strong></div>
     <div class="total"><span>Total</span><strong id="total">$0</strong></div>
     <label>Nombre<input id="name" autocomplete="name" /></label>
-    <label>Ciudad<input id="city" autocomplete="address-level2" /></label>
-    <button class="btn wide" id="send" disabled>Enviar pedido por WhatsApp</button>
+    <label>Departamento / región<select id="department" autocomplete="address-level1" required>
+      <option value="">Selecciona tu departamento</option>
+      {colombianDepartments.map(department => <option value={department}>{department}</option>)}
+    </select></label>
+    <label>Ciudad / municipio<input id="city" list="municipalities" autocomplete="address-level2" placeholder="Escribe o elige tu municipio" required />
+      <datalist id="municipalities">{commonMunicipalities.map(city => <option value={city} />)}</datalist>
+    </label>
+    <label>Correo para el pago<input id="email" type="email" autocomplete="email" /></label>
+    <button class="btn wide" id="pay-mercadopago" disabled>Continuar a Mercado Pago</button>
+    <p class="payment-note">El pago se procesa de forma segura con Mercado Pago. Envío: $6.000 en Bogotá D. C. y $15.000 en el resto del país; se suma al total.</p>
+    <p id="payment-error" class="payment-error" role="alert" hidden></p>
+    <button class="btn wide whatsapp-order" id="send" disabled>Enviar pedido por WhatsApp</button>
     <p class="fine">Te confirmamos el pago y el envío por WhatsApp.</p>
   </dialog>
 
@@ -164,6 +177,15 @@ const filtros = products.filter(p => p.category === 'filtro');
     const dlg = $('#cart');
     const header = document.querySelector('.top');
     const menuToggle = $('#nav-toggle');
+    const departmentInput = $('#department');
+    const cityInput = $('#city');
+    const normalizeLocation = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('es');
+    function destinationShipping() {
+      const department = departmentInput.value;
+      const city = cityInput.value.trim();
+      if (!department || !city) return null;
+      return normalizeLocation(department) === normalizeLocation('Bogotá, D.C.') ? 6000 : 15000;
+    }
     function closeMenu() { header.classList.remove('menu-open'); menuToggle.setAttribute('aria-expanded', 'false'); menuToggle.setAttribute('aria-label', 'Abrir menú'); }
     menuToggle.onclick = () => {
       const isOpen = menuToggle.getAttribute('aria-expanded') !== 'true';
@@ -200,9 +222,14 @@ const filtros = products.filter(p => p.category === 'filtro');
           <span>${fmt(price * q)}</span></li>`;
       }).join('');
       $('#empty').hidden = ids.length > 0;
-      $('#total').textContent = fmt(total);
+      const shipping = destinationShipping();
+      $('#subtotal').textContent = fmt(total);
+      $('#shipping-fee').textContent = shipping === null ? 'Selecciona destino' : fmt(shipping);
+      $('#shipping-destination').textContent = shipping === null ? '' : `· ${cityInput.value.trim()}, ${departmentInput.value}`;
+      $('#total').textContent = fmt(total + (shipping || 0));
       $('#count').textContent = count;
-      $('#send').disabled = !ids.length;
+      $('#send').disabled = !ids.length || shipping === null;
+      $('#pay-mercadopago').disabled = !ids.length || shipping === null;
     }
     document.addEventListener('click', e => {
       const add = e.target.closest('.add');
@@ -216,14 +243,58 @@ const filtros = products.filter(p => p.category === 'filtro');
       if (step) { cart[step.dataset.id] = Math.max(0, (cart[step.dataset.id] || 0) + Number(step.dataset.d)); save(); }
     });
     $('#open-cart').onclick = () => dlg.showModal();
+    $('#pay-mercadopago').onclick = async () => {
+      const button = $('#pay-mercadopago');
+      const error = $('#payment-error');
+      error.hidden = true;
+      const buyer = { name: $('#name').value.trim(), email: $('#email').value.trim() };
+      buyer.department = departmentInput.value;
+      buyer.city = cityInput.value.trim();
+      if (!buyer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.email)) {
+        error.textContent = 'Escribe tu nombre y un correo válido para continuar al pago.';
+        error.hidden = false;
+        return;
+      }
+      if (!buyer.department || !buyer.city) {
+        error.textContent = 'Selecciona tu departamento y escribe o elige tu ciudad o municipio.';
+        error.hidden = false;
+        return;
+      }
+      button.disabled = true;
+      button.textContent = 'Conectando con Mercado Pago…';
+      try {
+        const response = await fetch('/api/mercadopago/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            buyer,
+            items: Object.keys(cart).filter(key => cart[key] > 0).map(key => ({ key, quantity: cart[key] })),
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok || typeof result.checkoutUrl !== 'string') throw new Error(result.error || 'No pudimos iniciar el pago.');
+        const checkoutUrl = new URL(result.checkoutUrl);
+        if (checkoutUrl.protocol !== 'https:' || !(checkoutUrl.hostname === 'mercadopago.com.co' || checkoutUrl.hostname.endsWith('.mercadopago.com.co'))) throw new Error('Mercado Pago devolvió una dirección de pago no válida.');
+        window.location.assign(checkoutUrl.href);
+      } catch (cause) {
+        error.textContent = cause instanceof Error ? cause.message : 'No pudimos iniciar el pago. Vuelve a intentarlo.';
+        error.hidden = false;
+        button.disabled = false;
+        button.textContent = 'Continuar a Mercado Pago';
+      }
+    };
     $('#send').onclick = () => {
       const ids = Object.keys(cart).filter(id => cart[id] > 0);
       let total = 0;
       const lines = ids.map(id => { const item = cartInfo(id); if (!item) return ''; const { product: p, size, grindName, price } = item; total += price * cart[id];
         return `• ${cart[id]} × ${p.name}${p.category === 'cafe' ? ` (${size} g, ${grindName})` : ''} — ${fmt(price * cart[id])}`; }).filter(Boolean);
-      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nTotal: ${fmt(total)}\nNombre: ${$('#name').value}\nCiudad: ${$('#city').value}`;
+      const shipping = destinationShipping();
+      if (!departmentInput.value || !cityInput.value.trim()) { $('#payment-error').textContent = 'Selecciona tu departamento y escribe o elige tu ciudad o municipio.'; $('#payment-error').hidden = false; return; }
+      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nEnvío a ${cityInput.value.trim()}, ${departmentInput.value}: ${fmt(shipping)}\nTotal con envío: ${fmt(total + shipping)}\nNombre: ${$('#name').value}\nCorreo: ${$('#email').value}`;
       window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
     };
+    departmentInput.addEventListener('change', render);
+    cityInput.addEventListener('input', render);
     render();
     document.querySelectorAll('[data-size-picker]').forEach(select => select.addEventListener('change', () => {
       const card = select.closest('.cafe');
@@ -363,7 +434,9 @@ const filtros = products.filter(p => p.category === 'filtro');
     .qty button{width:1.8rem;height:1.8rem;border-radius:50%;border:1.5px solid var(--ink);background:none;cursor:pointer;font-size:1rem}
     .total{display:flex;justify-content:space-between;margin:1.25rem 0;font-family:"Source Serif 4",serif;font-size:1.4rem}
     dialog label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.8rem}
-    dialog input{display:block;width:100%;margin-top:.25rem;padding:.6rem .7rem;border:1.5px solid var(--ink);border-radius:.5rem;background:#fff8;font:1rem Archivo}
+    dialog input,dialog select{display:block;width:100%;margin-top:.25rem;padding:.6rem .7rem;border:1.5px solid var(--ink);border-radius:.5rem;background:#fff8;font:1rem Archivo;color:var(--ink)}
+    .shipping-row{display:flex;justify-content:space-between;gap:1rem;margin:.5rem 0;font-size:.9rem}.shipping-row small{display:block;color:#62584c;font-size:.72rem;font-weight:400}
+    .payment-note,.payment-error{margin:.65rem 0;font-size:.8rem;line-height:1.4}.payment-note{color:#4f463c}.payment-error{color:#9b0e1a;font-weight:700}.payment-error[hidden]{display:none}.whatsapp-order{margin-top:.65rem;background:transparent;color:var(--ink);border:1px solid var(--ink)}.whatsapp-order:hover{background:#0000000a}
     .fine{font-size:.78rem;margin-top:.8rem;text-align:center}
     @media (max-width:650px){.top{gap:.55rem;padding:.6rem .7rem}.logo img{width:6.7rem}.top nav{display:none;position:absolute;left:0;right:0;top:100%;translate:0 0;width:100%;flex-direction:column;gap:0;padding:.4rem 1rem .8rem;background:var(--night);white-space:normal}.top.menu-open nav{display:flex}.top nav a{padding:.75rem .25rem;font-size:.95rem;border-top:1px solid #efe6d233}.top .cartbtn{margin-left:auto;padding:.4rem .7rem;font-size:.78rem;white-space:nowrap}.menu-toggle{display:grid;place-content:center;gap:4px;width:2.2rem;height:2.2rem;flex:0 0 auto;border:1px solid #efe6d255;border-radius:50%;background:transparent;color:var(--cream);cursor:pointer}.menu-toggle span{display:block;width:1rem;height:2px;background:currentColor;transition:transform .2s,opacity .2s}.top.menu-open .menu-toggle span:first-child{transform:translateY(6px) rotate(45deg)}.top.menu-open .menu-toggle span:nth-child(2){opacity:0}.top.menu-open .menu-toggle span:last-child{transform:translateY(-6px) rotate(-45deg)}}
     @media (max-width:560px){.presale-info{padding-block:3rem;align-items:flex-start}.presale-mark{width:6rem;height:6rem}.presale-mark strong{font-size:2.8rem}.presale-mark span{font-size:.65rem}}
