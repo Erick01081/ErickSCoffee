@@ -52,12 +52,14 @@ export const POST: APIRoute = async ({ request, url }) => {
   const address = typeof input.buyer?.address === 'string' ? input.buyer.address.trim().slice(0, 200) : '';
   const phone = typeof input.buyer?.phone === 'string' ? input.buyer.phone.trim().slice(0, 30) : '';
   const identification = typeof input.buyer?.identification === 'string' ? input.buyer.identification.trim().slice(0, 30) : '';
+  
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: 'Escribe tu nombre y un correo válido para continuar.' }, 400);
   }
   if (!colombianDepartments.includes(department) || !city) {
     return json({ error: 'Selecciona un departamento y escribe tu ciudad o municipio.' }, 400);
   }
+  
   const phoneDigits = phone.replace(/\D/g, '');
   const identificationDigits = identification.replace(/\D/g, '');
   if (!address || phoneDigits.length < 7 || phoneDigits.length > 15 || identificationDigits.length < 5 || identificationDigits.length > 15) {
@@ -67,8 +69,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     return json({ error: 'El carrito no tiene productos válidos.' }, 400);
   }
 
-  const orderItems: Array<{ title: string; quantity: number; unit_price: string }> = [];
-  let total = 0;
+  const preferenceItems: Array<{ title: string; quantity: number; unit_price: number; currency_id: string }> = [];
 
   for (const entry of input.items) {
     if (typeof entry.key !== 'string' || !Number.isInteger(entry.quantity) || Number(entry.quantity) < 1 || Number(entry.quantity) > 10) {
@@ -96,70 +97,81 @@ export const POST: APIRoute = async ({ request, url }) => {
       return json({ error: 'La presentación de uno de los productos no es válida.' }, 400);
     }
 
-    total += unitPrice * quantity;
-    orderItems.push({
+    preferenceItems.push({
       title,
       quantity,
-      unit_price: String(unitPrice),
+      unit_price: Number(unitPrice), // En preferencias debe ser número entero en COP
+      currency_id: 'COP',
     });
   }
 
   const deliveryFee = shippingPrice(department, city);
-  total += deliveryFee;
-  orderItems.push({
+  preferenceItems.push({
     title: `Envío a ${city}, ${department}`,
     quantity: 1,
-    unit_price: String(deliveryFee),
+    unit_price: Number(deliveryFee),
+    currency_id: 'COP',
   });
 
   const firstName = name.split(/\s+/)[0];
   const lastName = name.split(/\s+/).slice(1).join(' ') || undefined;
   const siteUrl = (PUBLIC_SITE_URL || url.origin).replace(/\/$/, '');
-  const payload = {
-    type: 'online',
-    processing_mode: 'manual',
-    total_amount: String(total),
+
+  // Estructura oficial para Preferences API (Checkout Pro)
+  const preferencePayload = {
     external_reference: randomUUID(),
-    description: `Pedido ØPPOSITE con envío a ${city}, ${department}.`,
+    items: preferenceItems,
     payer: {
+      name: firstName,
+      surname: lastName,
       email,
-      first_name: firstName,
-      ...(lastName ? { last_name: lastName } : {}),
-      phone: { area_code: '57', number: phoneDigits },
-      identification: { type: 'CC', number: identificationDigits },
-      address: { street_name: address, city_name: city, state_name: department },
-    },
-    items: orderItems,
-    config: {
-      online: {
-        success_url: `${siteUrl}/pago?resultado=aprobado`,
-        failure_url: `${siteUrl}/pago?resultado=rechazado`,
-        pending_url: `${siteUrl}/pago?resultado=pendiente`,
-        auto_return: 'approved',
+      phone: {
+        area_code: '57',
+        number: phoneDigits,
+      },
+      identification: {
+        type: 'CC',
+        number: identificationDigits,
+      },
+      address: {
+        street_name: address,
+        city_name: city,
+        state_name: department,
       },
     },
+    back_urls: {
+      success: `${siteUrl}/pago?resultado=aprobado`,
+      failure: `${siteUrl}/pago?resultado=rechazado`,
+      pending: `${siteUrl}/pago`
+    },
+    auto_return: 'approved',
+    statement_descriptor: 'OPPOSITE',
   };
 
   let response: Response;
   try {
-    response = await fetch('https://api.mercadopago.com/v1/orders', {
+    response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Idempotency-Key': randomUUID(),
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(preferencePayload),
     });
   } catch {
     return json({ error: 'No pudimos conectar con Mercado Pago. Inténtalo de nuevo.' }, 502);
   }
 
   const result = await response.json().catch(() => ({}));
-  if (!response.ok || typeof result.checkout_url !== 'string') {
-    console.error('Mercado Pago order creation failed', response.status, JSON.stringify({ error: result.error, message: result.message, cause: result.cause, errors: result.errors }));
+  
+  // Mercado Pago devuelve init_point (o sandbox_init_point para pruebas)
+  const checkoutUrl = MP_ENVIRONMENT === 'test' ? (result.sandbox_init_point || result.init_point) : result.init_point;
+
+  if (!response.ok || typeof checkoutUrl !== 'string') {
+    console.error('Mercado Pago preference creation failed', response.status, JSON.stringify(result));
     return json({ error: 'Mercado Pago no pudo iniciar el pago. Revisa los datos e inténtalo otra vez.' }, 502);
   }
 
-  return json({ checkoutUrl: result.checkout_url });
+  return json({ checkoutUrl });
 };
