@@ -25,15 +25,21 @@ import SpeedInsights from '@vercel/speed-insights/astro';
     <h1 id="title">Estamos verificando tu pago</h1>
     <p id="message" role="status" aria-live="polite">Espera un momento mientras confirmamos la operación con Mercado Pago.</p>
     <p id="order" hidden></p>
+    <a id="whatsapp-delivery" href={`https://wa.me/${config.whatsapp}`} target="_blank" rel="noopener">Acordar entrega por WhatsApp</a>
     <a href="/#cafes">Volver a los cafés</a>
   </main>
-  <script is:inline>
+  <script is:inline define:vars={{ config }}>
     const params = new URLSearchParams(location.search);
     const result = params.get('resultado');
     const orderId = params.get('order_id') || params.get('data.id');
     const title = document.querySelector('#title');
     const message = document.querySelector('#message');
     const order = document.querySelector('#order');
+    const whatsappDelivery = document.querySelector('#whatsapp-delivery');
+    const deliveryMessage = orderId
+      ? `Hola, quiero acordar la entrega de mi pedido ${orderId} después del pago.`
+      : 'Hola, quiero acordar la entrega de mi pedido después del pago.';
+    whatsappDelivery.href = `https://wa.me/${config.whatsapp}?text=${encodeURIComponent(deliveryMessage)}`;
     if (orderId) {
       order.hidden = false;
       order.textContent = `Pedido: ${orderId}`;
