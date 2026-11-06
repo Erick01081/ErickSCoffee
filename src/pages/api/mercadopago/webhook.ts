@@ -43,8 +43,27 @@ async function saveOrder(orderId: string, order: Record<string, unknown>) {
   };
 
   const response = await fetch(
-    `${supabaseRestUrl('mercadopago_orders')}?on_conflict=mercadopago_order_id`,
+    `${supabaseRestUrl('mercadopago_orders')}?external_reference=eq.${encodeURIComponent(payload.external_reference || '')}`,
     {
+      method: 'PATCH',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Supabase update failed (${response.status}): ${error.slice(0, 300)}`);
+  }
+
+  const updatedRows = await response.json().catch(() => []);
+  if (!Array.isArray(updatedRows) || updatedRows.length === 0) {
+    const insertResponse = await fetch(`${supabaseRestUrl('mercadopago_orders')}?on_conflict=mercadopago_order_id`, {
       method: 'POST',
       headers: {
         apikey: SUPABASE_SERVICE_ROLE_KEY,
@@ -53,12 +72,11 @@ async function saveOrder(orderId: string, order: Record<string, unknown>) {
         Prefer: 'resolution=merge-duplicates,return=minimal',
       },
       body: JSON.stringify(payload),
-    },
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Supabase insert failed (${response.status}): ${error.slice(0, 300)}`);
+    });
+    if (!insertResponse.ok) {
+      const error = await insertResponse.text();
+      throw new Error(`Supabase insert failed (${insertResponse.status}): ${error.slice(0, 300)}`);
+    }
   }
 }
 
