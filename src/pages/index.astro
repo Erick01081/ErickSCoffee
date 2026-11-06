@@ -168,8 +168,8 @@ const filtros = products.filter(p => p.category === 'filtro');
     <button class="btn wide" id="pay-mercadopago" disabled>Continuar a Mercado Pago</button>
     <p class="payment-note">El pago se procesa de forma segura con Mercado Pago. Envío: $6.000 en Bogotá D. C. y $15.000 en el resto del país; se suma al total.</p>
     <p id="payment-error" class="payment-error" role="alert" hidden></p>
-    <button class="btn wide whatsapp-order" id="send" disabled>Enviar pedido por WhatsApp</button>
-    <p class="fine">Te confirmamos el pago y el envío por WhatsApp.</p>
+    <button class="btn wide whatsapp-order" id="send" disabled>Enviar pedido y acordar envío por WhatsApp</button>
+    <p class="fine">Por WhatsApp puedes enviar solo el pedido y acordamos contigo el costo y la forma de envío.</p>
   </dialog>
 
   <script is:inline define:vars={{ products, config }}>
@@ -231,7 +231,7 @@ const filtros = products.filter(p => p.category === 'filtro');
       $('#shipping-destination').textContent = shipping === null ? '' : `· ${cityInput.value.trim()}, ${departmentInput.value}`;
       $('#total').textContent = fmt(total + (shipping || 0));
       $('#count').textContent = count;
-      $('#send').disabled = !ids.length || shipping === null;
+      $('#send').disabled = !ids.length;
       $('#pay-mercadopago').disabled = !ids.length || shipping === null;
     }
     document.addEventListener('click', e => {
@@ -305,18 +305,10 @@ const filtros = products.filter(p => p.category === 'filtro');
       const lines = ids.map(id => { const item = cartInfo(id); if (!item) return ''; const { product: p, size, grindName, price } = item; total += price * cart[id];
         return `• ${cart[id]} × ${p.name}${p.category === 'cafe' ? ` (${size} g, ${grindName})` : ''} — ${fmt(price * cart[id])}`; }).filter(Boolean);
       const shipping = destinationShipping();
-      if (!departmentInput.value || !cityInput.value.trim()) { $('#payment-error').textContent = 'Selecciona tu departamento y escribe o elige tu ciudad o municipio.'; $('#payment-error').hidden = false; return; }
-      const address = $('#address').value.trim();
-      const phone = $('#phone').value.trim();
-      const identification = $('#identification').value.trim();
-      const phoneDigits = phone.replace(/\D/g, '');
-      const identificationDigits = identification.replace(/\D/g, '');
-      if (!address || phoneDigits.length < 7 || phoneDigits.length > 15 || identificationDigits.length < 5 || identificationDigits.length > 15) {
-        $('#payment-error').textContent = 'Completa una dirección, un teléfono y una cédula válidos para enviar el pedido.';
-        $('#payment-error').hidden = false;
-        return;
-      }
-      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nEnvío a ${cityInput.value.trim()}, ${departmentInput.value}: ${fmt(shipping)}\nDirección: ${address}\nTeléfono: ${phone}\nCédula: ${identification}\nTotal con envío: ${fmt(total + shipping)}\nNombre: ${$('#name').value}\nCorreo: ${$('#email').value}`;
+      const destination = departmentInput.value && cityInput.value.trim()
+        ? `Destino indicado: ${cityInput.value.trim()}, ${departmentInput.value}`
+        : 'Destino y costo de envío: por acordar por WhatsApp';
+      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nSubtotal: ${fmt(total)}\n${destination}\nQuedo atento para acordar el envío.`;
       window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
     };
     departmentInput.addEventListener('change', render);
