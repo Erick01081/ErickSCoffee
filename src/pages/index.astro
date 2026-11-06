@@ -161,6 +161,9 @@ const filtros = products.filter(p => p.category === 'filtro');
     <label>Ciudad / municipio<input id="city" list="municipalities" autocomplete="address-level2" placeholder="Escribe o elige tu municipio" required />
       <datalist id="municipalities">{commonMunicipalities.map(city => <option value={city} />)}</datalist>
     </label>
+    <label>Dirección de entrega<input id="address" autocomplete="street-address" placeholder="Calle, carrera, número, apartamento" required /></label>
+    <label>Teléfono<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required /></label>
+    <label>Cédula<input id="identification" inputmode="numeric" autocomplete="off" placeholder="Número de cédula" required /></label>
     <label>Correo para el pago<input id="email" type="email" autocomplete="email" /></label>
     <button class="btn wide" id="pay-mercadopago" disabled>Continuar a Mercado Pago</button>
     <p class="payment-note">El pago se procesa de forma segura con Mercado Pago. Envío: $6.000 en Bogotá D. C. y $15.000 en el resto del país; se suma al total.</p>
@@ -247,7 +250,13 @@ const filtros = products.filter(p => p.category === 'filtro');
       const button = $('#pay-mercadopago');
       const error = $('#payment-error');
       error.hidden = true;
-      const buyer = { name: $('#name').value.trim(), email: $('#email').value.trim() };
+      const buyer = {
+        name: $('#name').value.trim(),
+        email: $('#email').value.trim(),
+        address: $('#address').value.trim(),
+        phone: $('#phone').value.trim(),
+        identification: $('#identification').value.trim(),
+      };
       buyer.department = departmentInput.value;
       buyer.city = cityInput.value.trim();
       if (!buyer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.email)) {
@@ -257,6 +266,13 @@ const filtros = products.filter(p => p.category === 'filtro');
       }
       if (!buyer.department || !buyer.city) {
         error.textContent = 'Selecciona tu departamento y escribe o elige tu ciudad o municipio.';
+        error.hidden = false;
+        return;
+      }
+      const phoneDigits = buyer.phone.replace(/\D/g, '');
+      const identificationDigits = buyer.identification.replace(/\D/g, '');
+      if (!buyer.address || phoneDigits.length < 7 || phoneDigits.length > 15 || identificationDigits.length < 5 || identificationDigits.length > 15) {
+        error.textContent = 'Completa una dirección, un teléfono y una cédula válidos para la entrega.';
         error.hidden = false;
         return;
       }
@@ -290,7 +306,17 @@ const filtros = products.filter(p => p.category === 'filtro');
         return `• ${cart[id]} × ${p.name}${p.category === 'cafe' ? ` (${size} g, ${grindName})` : ''} — ${fmt(price * cart[id])}`; }).filter(Boolean);
       const shipping = destinationShipping();
       if (!departmentInput.value || !cityInput.value.trim()) { $('#payment-error').textContent = 'Selecciona tu departamento y escribe o elige tu ciudad o municipio.'; $('#payment-error').hidden = false; return; }
-      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nEnvío a ${cityInput.value.trim()}, ${departmentInput.value}: ${fmt(shipping)}\nTotal con envío: ${fmt(total + shipping)}\nNombre: ${$('#name').value}\nCorreo: ${$('#email').value}`;
+      const address = $('#address').value.trim();
+      const phone = $('#phone').value.trim();
+      const identification = $('#identification').value.trim();
+      const phoneDigits = phone.replace(/\D/g, '');
+      const identificationDigits = identification.replace(/\D/g, '');
+      if (!address || phoneDigits.length < 7 || phoneDigits.length > 15 || identificationDigits.length < 5 || identificationDigits.length > 15) {
+        $('#payment-error').textContent = 'Completa una dirección, un teléfono y una cédula válidos para enviar el pedido.';
+        $('#payment-error').hidden = false;
+        return;
+      }
+      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nEnvío a ${cityInput.value.trim()}, ${departmentInput.value}: ${fmt(shipping)}\nDirección: ${address}\nTeléfono: ${phone}\nCédula: ${identification}\nTotal con envío: ${fmt(total + shipping)}\nNombre: ${$('#name').value}\nCorreo: ${$('#email').value}`;
       window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
     };
     departmentInput.addEventListener('change', render);

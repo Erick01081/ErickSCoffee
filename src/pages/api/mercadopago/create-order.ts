@@ -29,7 +29,15 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   let input: {
     items?: Array<{ key?: unknown; quantity?: unknown }>;
-    buyer?: { name?: unknown; email?: unknown; department?: unknown; city?: unknown };
+    buyer?: {
+      name?: unknown;
+      email?: unknown;
+      department?: unknown;
+      city?: unknown;
+      address?: unknown;
+      phone?: unknown;
+      identification?: unknown;
+    };
   };
   try {
     input = await request.json();
@@ -41,11 +49,19 @@ export const POST: APIRoute = async ({ request, url }) => {
   const email = typeof input.buyer?.email === 'string' ? input.buyer.email.trim().slice(0, 160) : '';
   const department = typeof input.buyer?.department === 'string' ? input.buyer.department.trim() : '';
   const city = typeof input.buyer?.city === 'string' ? input.buyer.city.trim().slice(0, 100) : '';
+  const address = typeof input.buyer?.address === 'string' ? input.buyer.address.trim().slice(0, 200) : '';
+  const phone = typeof input.buyer?.phone === 'string' ? input.buyer.phone.trim().slice(0, 30) : '';
+  const identification = typeof input.buyer?.identification === 'string' ? input.buyer.identification.trim().slice(0, 30) : '';
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return json({ error: 'Escribe tu nombre y un correo válido para continuar.' }, 400);
   }
   if (!colombianDepartments.includes(department) || !city) {
     return json({ error: 'Selecciona un departamento y escribe tu ciudad o municipio.' }, 400);
+  }
+  const phoneDigits = phone.replace(/\D/g, '');
+  const identificationDigits = identification.replace(/\D/g, '');
+  if (!address || phoneDigits.length < 7 || phoneDigits.length > 15 || identificationDigits.length < 5 || identificationDigits.length > 15) {
+    return json({ error: 'Escribe una dirección, un teléfono y una cédula válidos.' }, 400);
   }
   if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 20) {
     return json({ error: 'El carrito no tiene productos válidos.' }, 400);
@@ -105,7 +121,14 @@ export const POST: APIRoute = async ({ request, url }) => {
     total_amount: String(total),
     external_reference: randomUUID(),
     description: `Pedido ØPPOSITE con envío a ${city}, ${department}.`,
-    payer: { email, first_name: firstName, ...(lastName ? { last_name: lastName } : {}) },
+    payer: {
+      email,
+      first_name: firstName,
+      ...(lastName ? { last_name: lastName } : {}),
+      phone: { area_code: '57', number: phoneDigits },
+      identification: { type: 'CC', number: identificationDigits },
+      address: { street_name: address, city_name: city, state_name: department },
+    },
     items: orderItems,
     config: {
       online: {
