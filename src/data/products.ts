@@ -2,6 +2,7 @@
 export type Product = {
   id: string; category: 'cafe' | 'metodo' | 'filtro';
   name: string; price: number; price340?: number; img?: string; note?: string;
+  available?: boolean;
   gallery?: string[];
   logoColor?: string;
   // solo cafés:
@@ -17,13 +18,13 @@ export const products: Product[] = [
     expectation: 'Esperamos una taza muy dulce y expresiva, pero nada empalagosa. Es un café fácil de disfrutar y con un retrogusto que invita a quedarse un rato más. Esta es nuestra impresión; descubre tú tus propios matices.',
     producer: 'Jhonatan Nieto & Johanny González',
     farm: 'Nuevo Sol', origin: 'Pitalito, Huila · 1.600 msnm' },
-  { id: 'sl28', category: 'cafe', theme: 'arco', logoColor: '#D81B7A', name: 'SL-28', price: 63000, price340: 68000,
+  { id: 'sl28', category: 'cafe', theme: 'arco', logoColor: '#D81B7A', name: 'SL-28', available: false, price: 63000, price340: 68000,
     img: '/img/sl28-served.webp', gallery: ['/img/sl28-served.webp', '/img/sl28.webp'], tag: 'El de las pausas para descubrir',
     process: 'Lavado avanzado con fermentación en mosto de variedad Gesha',
     why: 'Escogimos el SL-28 con el propósito de ofrecer un café muy expresivo y floral. Es poco común encontrar un proceso de fermentación con mosto de otra variedad, en este caso Gesha, que le aporta un toque floral único. Nos pareció una forma distinta de acercarnos a la genética SL-28.',
     expectation: 'Esperamos una taza limpia y muy expresiva, con un carácter floral que nace de su proceso. Es una invitación a descubrir una faceta poco habitual de esta variedad.', producer: 'Marlon Bolaños',
     farm: 'The Three Coffee Farmers', origin: 'San Agustín, Huila · 1.700 msnm' },
-  { id: 'bourbon', category: 'cafe', theme: 'olas', logoColor: '#8E1B2E', name: 'Bourbon Rojo', price: 78000, price340: 84000,
+  { id: 'bourbon', category: 'cafe', theme: 'olas', logoColor: '#8E1B2E', name: 'Bourbon Rojo', available: false, price: 78000, price340: 84000,
     img: '/img/bourbon-served.webp', gallery: ['/img/bourbon-served.webp', '/img/bourbon-rojo.webp'], tag: 'El de las tazas que se vuelven viaje', process: 'Natural · Thermal Shock',
     why: 'El Bourbon Rojo fue un gran descubrimiento durante una cata con Marlon. Desde el primer instante, su aroma y luego su fragancia nos cautivaron. Al probarlo, encontramos un café muy expresivo, pero nada invasivo, con matices llamativos que ya resultan atractivos desde el olfato.',
     expectation: 'Su proceso hace que esos aromas sean muy atractivos y, en taza, la experiencia se convierte para nosotros en un viaje sin regreso. Nos parece un café expresivo y envolvente; te invitamos a descubrir qué despierta en ti.', producer: 'Marlon Bolaños',

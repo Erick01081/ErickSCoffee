@@ -125,6 +125,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     if (extra.length) return json({ error: 'Hay una presentación inválida en el carrito.' }, 400);
     const product = products.find(item => item.id === productId);
     if (!product) return json({ error: 'No encontramos uno de los productos del carrito.' }, 400);
+    if (product.available === false) return json({ error: 'Uno de los productos seleccionados estará disponible próximamente.' }, 400);
 
     const quantity = Number(entry.quantity);
     let unitPrice = product.price;
