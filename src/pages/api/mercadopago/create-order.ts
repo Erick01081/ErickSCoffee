@@ -72,6 +72,7 @@ export const POST: APIRoute = async ({ request, url }) => {
 
   let input: {
     items?: Array<{ key?: unknown; quantity?: unknown }>;
+    shippingPayment?: unknown;
     buyer?: {
       name?: unknown;
       email?: unknown;
@@ -165,19 +166,26 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   const deliveryFee = shippingPrice(department, city);
-  preferenceItems.push({
-    title: `Envío a ${city}, ${department}`,
-    quantity: 1,
-    unit_price: Number(deliveryFee),
-    currency_id: 'COP',
-  });
-  const total = subtotal + Number(deliveryFee);
+  const shippingPayment = input.shippingPayment === 'on_delivery' ? 'on_delivery' : 'prepaid';
+  const chargedShipping = shippingPayment === 'prepaid' ? Number(deliveryFee) : 0;
+  if (chargedShipping > 0) {
+    preferenceItems.push({
+      title: `Envío a ${city}, ${department}`,
+      quantity: 1,
+      unit_price: chargedShipping,
+      currency_id: 'COP',
+    });
+  }
+  const total = subtotal + chargedShipping;
   const externalReference = randomUUID();
   const checkoutData = {
     buyer: { name, email, department, city, address, phone, identification },
     items: checkoutItems,
     subtotal,
-    shipping: Number(deliveryFee),
+    shipping: chargedShipping,
+    shippingPayment,
+    shippingFee: Number(deliveryFee),
+    shippingDueOnDelivery: shippingPayment === 'on_delivery' ? Number(deliveryFee) : 0,
     total,
   };
 
