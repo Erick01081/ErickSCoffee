@@ -167,8 +167,13 @@ const filtros = products.filter(p => p.category === 'filtro');
     <label>Teléfono<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required /></label>
     <label>Cédula<input id="identification" inputmode="numeric" autocomplete="off" placeholder="Número de cédula" required /></label>
     <label>Correo para el pago<input id="email" type="email" autocomplete="email" /></label>
+    <fieldset class="shipping-pay">
+      <legend>¿Cómo quieres pagar el envío?</legend>
+      <label class="radio"><input type="radio" name="shipping-payment" value="prepaid" checked /> Pagar el envío ahora (se suma al total)</label>
+      <label class="radio"><input type="radio" name="shipping-payment" value="on_delivery" /> Pagar el envío al recibir</label>
+    </fieldset>
     <button class="btn wide" id="pay-mercadopago" disabled>Continuar a Mercado Pago</button>
-    <p class="payment-note">El pago se procesa de forma segura con Mercado Pago. Envío: $6.000 en Bogotá D. C. y $15.000 en el resto del país; se suma al total.</p>
+    <p class="payment-note">El pago se procesa de forma segura con Mercado Pago. Envío: $6.000 en Bogotá D. C. y $15.000 en el resto del país; puedes sumarlo al total o pagarlo al recibir.</p>
     <p id="payment-error" class="payment-error" role="alert" hidden></p>
     <button class="btn wide whatsapp-order" id="send" disabled>Enviar pedido y acordar envío por WhatsApp</button>
     <p class="fine">Por WhatsApp puedes enviar solo el pedido y acordamos contigo el costo y la forma de envío.</p>
@@ -191,6 +196,7 @@ const filtros = products.filter(p => p.category === 'filtro');
       if (!department || !city) return null;
       return normalizeLocation(department) === normalizeLocation('Bogotá, D.C.') ? 6000 : 15000;
     }
+    const shippingPayment = () => document.querySelector('input[name="shipping-payment"]:checked')?.value === 'on_delivery' ? 'on_delivery' : 'prepaid';
     function closeMenu() { header.classList.remove('menu-open'); menuToggle.setAttribute('aria-expanded', 'false'); menuToggle.setAttribute('aria-label', 'Abrir menú'); }
     menuToggle.onclick = () => {
       const isOpen = menuToggle.getAttribute('aria-expanded') !== 'true';
@@ -229,9 +235,10 @@ const filtros = products.filter(p => p.category === 'filtro');
       $('#empty').hidden = ids.length > 0;
       const shipping = destinationShipping();
       $('#subtotal').textContent = fmt(total);
-      $('#shipping-fee').textContent = shipping === null ? 'Selecciona destino' : fmt(shipping);
+      const onDelivery = shippingPayment() === 'on_delivery';
+      $('#shipping-fee').textContent = shipping === null ? 'Selecciona destino' : (onDelivery ? `${fmt(shipping)} al recibir` : fmt(shipping));
       $('#shipping-destination').textContent = shipping === null ? '' : `· ${cityInput.value.trim()}, ${departmentInput.value}`;
-      $('#total').textContent = fmt(total + (shipping || 0));
+      $('#total').textContent = fmt(total + (onDelivery ? 0 : (shipping || 0)));
       $('#count').textContent = count;
       $('#send').disabled = !ids.length;
       $('#pay-mercadopago').disabled = !ids.length || shipping === null;
@@ -286,6 +293,7 @@ const filtros = products.filter(p => p.category === 'filtro');
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             buyer,
+            shippingPayment: shippingPayment(),
             items: Object.keys(cart).filter(key => cart[key] > 0).map(key => ({ key, quantity: cart[key] })),
           }),
         });
@@ -310,10 +318,11 @@ const filtros = products.filter(p => p.category === 'filtro');
       const destination = departmentInput.value && cityInput.value.trim()
         ? `Destino indicado: ${cityInput.value.trim()}, ${departmentInput.value}`
         : 'Destino y costo de envío: por acordar por WhatsApp';
-      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nSubtotal: ${fmt(total)}\n${destination}\nQuedo atento para acordar el envío.`;
+      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nSubtotal: ${fmt(total)}\n${destination}\nEnvío: ${shippingPayment() === 'on_delivery' ? 'lo pago al recibir' : 'lo pago anticipado'}\nQuedo atento para acordar el envío.`;
       window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
     };
     departmentInput.addEventListener('change', render);
+    document.querySelectorAll('input[name="shipping-payment"]').forEach(el => el.addEventListener('change', render));
     cityInput.addEventListener('input', render);
     render();
     document.querySelectorAll('[data-size-picker]').forEach(select => select.addEventListener('change', () => {
@@ -456,6 +465,7 @@ const filtros = products.filter(p => p.category === 'filtro');
     .total{display:flex;justify-content:space-between;margin:1.25rem 0;font-family:"Source Serif 4",serif;font-size:1.4rem}
     dialog label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.8rem}
     dialog input,dialog select{display:block;width:100%;margin-top:.25rem;padding:.6rem .7rem;border:1.5px solid var(--ink);border-radius:.5rem;background:#fff8;font:1rem Archivo;color:var(--ink)}
+    .shipping-pay{border:1px solid #0000002a;border-radius:.6rem;padding:.6rem .8rem;margin:.75rem 0;font-size:.9rem}.shipping-pay legend{font-weight:700;padding:0 .3rem}.shipping-pay .radio{display:flex;align-items:center;gap:.5rem;margin:.35rem 0;font-weight:400}.shipping-pay .radio input{width:auto;margin:0}
     .shipping-row{display:flex;justify-content:space-between;gap:1rem;margin:.5rem 0;font-size:.9rem}.shipping-row small{display:block;color:#62584c;font-size:.72rem;font-weight:400}
     .payment-note,.payment-error{margin:.65rem 0;font-size:.8rem;line-height:1.4}.payment-note{color:#4f463c}.payment-error{color:#9b0e1a;font-weight:700}.payment-error[hidden]{display:none}.whatsapp-order{margin-top:.65rem;background:transparent;color:var(--ink);border:1px solid var(--ink)}.whatsapp-order:hover{background:#0000000a}
     .fine{font-size:.78rem;margin-top:.8rem;text-align:center}
