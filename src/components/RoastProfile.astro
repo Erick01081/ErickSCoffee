@@ -4,36 +4,44 @@ import type { RoastProfile } from '../data/roasts';
 interface Props { roast: RoastProfile; name: string }
 const { roast, name } = Astro.props;
 
-// Geometría del gráfico (unidades del viewBox)
-const VW = 960, PL = 74, PR = 900, PT = 46, PB = 340, VMAX = 260;
 const T = roast.duration;
-const x = (t: number) => PL + ((PR - PL) * t) / T;
-const y = (v: number) => PB - ((PB - PT) * v) / VMAX;
-const mmss = (t: number) => `${Math.floor(Math.round(t) / 60)}:${String(Math.round(t) % 60).padStart(2, '0')}`;
-const path = (pts: number[][], scale = 1) => pts.map(([t, v], i) => `${i ? 'L' : 'M'}${x(t).toFixed(1)},${y(v * scale).toFixed(1)}`).join('');
+const VMAX = 260;
 const n = (v: number) => v.toLocaleString('es-CO', { maximumFractionDigits: 2 });
-
-const minutes = Array.from({ length: Math.floor(T / 60) + 1 }, (_, m) => m);
-const tempTicks = Array.from({ length: 11 }, (_, i) => i * 25);
-const BAND_Y = PB + 30, BAND_H = 20, BAND_GAP = 4;
-const bands = [
-  { key: 'power', label: 'Potencia', prefix: 'P', rows: roast.power, color: '#6a1b7a', min: 5, max: 12 },
-  { key: 'fan', label: 'Ventilador', prefix: 'F', rows: roast.fan, color: '#0e6b4a', min: 1, max: 6 },
-  { key: 'drum', label: 'Tambor', prefix: 'D', rows: roast.drum, color: '#1a120d', min: 7, max: 9 },
-];
-const VH = BAND_Y + bands.length * (BAND_H + BAND_GAP) + 6;
-const phaseColors = ['var(--teal)', 'var(--sun)', 'var(--orange)'];
+const mmss = (t: number) => `${Math.floor(Math.round(t) / 60)}:${String(Math.round(t) % 60).padStart(2, '0')}`;
 const series = roast.series;
+const phaseColors = ['var(--teal)', 'var(--sun)', 'var(--orange)'];
+
+// Dos versiones del gráfico: una ancha (escritorio) y una compacta (teléfono) para que nunca se salga de la pantalla.
+const layouts = [
+  { key: 'wide', VW: 960, PL: 74, PR: 900, PT: 46, PB: 340, bandH: 20, bandGap: 4, labels: true, tickStep: 25, minuteStep: 1, bandLabels: ['Potencia', 'Ventilador', 'Tambor'] },
+  { key: 'compact', VW: 400, PL: 34, PR: 370, PT: 22, PB: 262, bandH: 18, bandGap: 3, labels: false, tickStep: 50, minuteStep: 2, bandLabels: ['P', 'F', 'D'] },
+].map(l => {
+  const x = (t: number) => l.PL + ((l.PR - l.PL) * t) / T;
+  const y = (v: number) => l.PB - ((l.PB - l.PT) * v) / VMAX;
+  const path = (pts: number[][], scale = 1) => pts.map(([t, v], i) => `${i ? 'L' : 'M'}${x(t).toFixed(1)},${y(v * scale).toFixed(1)}`).join('');
+  const bandY = l.PB + (l.labels ? 30 : 26);
+  const VH = bandY + 3 * (l.bandH + l.bandGap) + 6;
+  const ticks = Array.from({ length: Math.floor(250 / l.tickStep) + 1 }, (_, i) => i * l.tickStep);
+  const minutes = Array.from({ length: Math.floor(T / 60) + 1 }, (_, m) => m).filter(m => m % l.minuteStep === 0);
+  const grid = Array.from({ length: Math.floor(T / 60) + 1 }, (_, m) => m);
+  return { ...l, x, y, bandY, VH, ticks, minutes, grid, paths: { bt: path(series.bt), ibts: path(series.ibts), rorBt: path(series.rorBt, 10), rorIbts: path(series.rorIbts, 10) } };
+});
+
+const bands = [
+  { label: 'Potencia', prefix: 'P', rows: roast.power, color: '#6a1b7a', min: 5, max: 12 },
+  { label: 'Ventilador', prefix: 'F', rows: roast.fan, color: '#0e6b4a', min: 1, max: 6 },
+  { label: 'Tambor', prefix: 'D', rows: roast.drum, color: '#1a120d', min: 7, max: 9 },
+];
 
 const stats = [
   { label: 'Tiempo total', value: mmss(T) },
-  { label: 'Primer crack', value: `${mmss(roast.firstCrack.t)}`, sub: `${n(roast.firstCrack.temp)} °C` },
+  { label: 'Primer crack', value: mmss(roast.firstCrack.t), sub: `${n(roast.firstCrack.temp)} °C` },
   { label: 'Desarrollo', value: `${n(roast.development.pct)} %`, sub: `${roast.development.time} · ΔT ${n(roast.development.deltaT)} °C` },
   { label: 'Temp. final', value: `${n(roast.endTemp)} °C`, sub: 'grano (IBTS)' },
   { label: 'Pérdida de peso', value: `${n(roast.lossPct)} %`, sub: `${n(roast.greenWeight)} g → ${n(roast.roastedWeight)} g` },
-  { label: 'Precalentamiento', value: `${roast.preheat} °C`, sub: `Humedad ${n(roast.humidity)} %` },
+  { label: 'Precalentamiento', value: `${n(roast.preheat)} °C`, sub: `Humedad ${n(roast.humidity)} %` },
 ];
-const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast.power, fan: roast.fan, drum: roast.drum });
+const hoverData = JSON.stringify({ T, VMAX, series, power: roast.power, fan: roast.fan, drum: roast.drum });
 ---
 <section class="roast" aria-labelledby="roast-title">
   <header class="roast-head">
@@ -51,75 +59,80 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
     {stats.map(s => <div><dt>{s.label}</dt><dd>{s.value}{s.sub && <small>{s.sub}</small>}</dd></div>)}
   </dl>
 
-  <p class="roast-swipe" aria-hidden="true">Desliza la gráfica →</p>
   <div class="roast-chart" data-roast={hoverData}>
-    <svg viewBox={`0 0 ${VW} ${VH}`} role="img" aria-labelledby="roast-svg-title roast-svg-desc">
-      <title id="roast-svg-title">Curva de tueste de {name}</title>
-      <desc id="roast-svg-desc">Temperatura del grano y tasa de aumento (RoR) durante {mmss(T)} minutos. Primer crack a los {mmss(roast.firstCrack.t)} con {n(roast.firstCrack.temp)} °C; descarga a {n(roast.endTemp)} °C.</desc>
-      <defs><clipPath id="roast-clip"><rect x={PL} y={PT} width={PR - PL} height={PB - PT} /></clipPath></defs>
+    {layouts.map(L => (
+      <svg class={`roast-svg roast-svg--${L.key}`} viewBox={`0 0 ${L.VW} ${L.VH}`} role="img" aria-label={`Curva de tueste de ${name}: primer crack a los ${mmss(roast.firstCrack.t)} con ${n(roast.firstCrack.temp)} °C, descarga a ${n(roast.endTemp)} °C a los ${mmss(T)}.`}
+        data-geo={JSON.stringify({ PL: L.PL, PR: L.PR, PT: L.PT, PB: L.PB })}>
+        <defs><clipPath id={`roast-clip-${L.key}`}><rect x={L.PL} y={L.PT} width={L.PR - L.PL} height={L.PB - L.PT} /></clipPath></defs>
 
-      {roast.phases.map((p, i) => <g>
-        <rect x={x(p.start)} y={PT - 14} width={x(p.end) - x(p.start)} height="8" rx="2" fill={phaseColors[i]}><title>{p.name}: {p.time} ({p.pct} %)</title></rect>
-      </g>)}
-      <text x={x((roast.phases[0].start + roast.phases[0].end) / 2)} y={PT - 22} text-anchor="middle" class="t-phase">{roast.phases[0].name} {roast.phases[0].time}</text>
-      <text x={x(roast.phases[1].end) - 8} y={PT - 22} text-anchor="end" class="t-phase">{roast.phases[1].name} {roast.phases[1].time}</text>
-      <text x={PR} y={PT - 22} text-anchor="end" class="t-phase t-dev">Des. {roast.phases[2].time}</text>
+        {roast.phases.map((p, i) => <rect x={L.x(p.start)} y={L.PT - (L.labels ? 14 : 12)} width={L.x(p.end) - L.x(p.start)} height={L.labels ? 8 : 6} rx="2" fill={phaseColors[i]}><title>{p.name}: {p.time} ({p.pct} %)</title></rect>)}
+        {L.labels && <>
+          <text x={L.x((roast.phases[0].start + roast.phases[0].end) / 2)} y={L.PT - 22} text-anchor="middle" class="t-phase">{roast.phases[0].name} {roast.phases[0].time}</text>
+          <text x={L.x(roast.phases[1].end) - 8} y={L.PT - 22} text-anchor="end" class="t-phase">{roast.phases[1].name} {roast.phases[1].time}</text>
+          <text x={L.PR} y={L.PT - 22} text-anchor="end" class="t-phase">Des. {roast.phases[2].time}</text>
+          <text x={L.PL - 8} y={L.PT - 22} text-anchor="end" class="t-unit">°C</text>
+          <text x={L.PR + 8} y={L.PT - 6} class="t-unit">RoR</text>
+        </>}
 
-      <rect x={PL} y={PT} width={PR - PL} height={PB - PT} class="plot-bg" />
-      <g class="grid">
-        {tempTicks.map(v => <line x1={PL} x2={PR} y1={y(v)} y2={y(v)} />)}
-        {minutes.map(m => <line x1={x(m * 60)} x2={x(m * 60)} y1={PT} y2={PB} />)}
-      </g>
-      <g class="t-axis">
-        {tempTicks.map(v => <text x={PL - 8} y={y(v) + 4} text-anchor="end">{v}</text>)}
-        {tempTicks.filter(v => v % 50 === 0).map(v => <text x={PR + 8} y={y(v) + 4}>{v / 10}</text>)}
-        {minutes.map(m => <text x={x(m * 60)} y={PB + 17} text-anchor="middle">{m}:00</text>)}
-      </g>
-      <text x={PL - 8} y={PT - 22} text-anchor="end" class="t-unit">°C</text>
-      <text x={PR + 8} y={PT - 6} class="t-unit">RoR</text>
+        <rect x={L.PL} y={L.PT} width={L.PR - L.PL} height={L.PB - L.PT} class="plot-bg" />
+        <g class="grid">
+          {L.ticks.map(v => <line x1={L.PL} x2={L.PR} y1={L.y(v)} y2={L.y(v)} />)}
+          {L.grid.map(m => <line x1={L.x(m * 60)} x2={L.x(m * 60)} y1={L.PT} y2={L.PB} />)}
+        </g>
+        <g class="t-axis">
+          {L.ticks.map(v => <text x={L.PL - 6} y={L.y(v) + 4} text-anchor="end">{v}</text>)}
+          {L.ticks.filter(v => v % 50 === 0).map(v => <text x={L.PR + 5} y={L.y(v) + 4}>{v / 10}</text>)}
+          {L.minutes.map(m => <text x={L.x(m * 60)} y={L.PB + 16} text-anchor="middle">{m}:00</text>)}
+        </g>
 
-      <g clip-path="url(#roast-clip)" fill="none" stroke-linejoin="round" stroke-linecap="round">
-        <path d={path(series.rorBt, 10)} class="c-rorbt"><title>RoR sonda (°C/min)</title></path>
-        <path d={path(series.rorIbts, 10)} class="c-roribts"><title>RoR IBTS (°C/min)</title></path>
-        <path d={path(series.bt)} class="c-bt"><title>Temperatura del grano · sonda (°C)</title></path>
-        <path d={path(series.ibts)} class="c-ibts"><title>Temperatura del grano · IBTS (°C)</title></path>
-      </g>
+        <g clip-path={`url(#roast-clip-${L.key})`} fill="none" stroke-linejoin="round" stroke-linecap="round">
+          <path d={L.paths.rorBt} class="c-rorbt" />
+          <path d={L.paths.rorIbts} class="c-roribts" />
+          <path d={L.paths.bt} class="c-bt" />
+          <path d={L.paths.ibts} class="c-ibts" />
+        </g>
 
-      {roast.events.map(e => {
-        const ex = x(e.t), ey = y(e.temp);
-        const sub = `${n(e.temp)} °C · ${mmss(e.t)}`;
-        const w = Math.max(e.label.length * 7.4, sub.length * 6.2) + 18;
-        const bx = e.anchor === 'end' ? ex + e.dx - w : ex + e.dx;
-        const by = ey + e.dy - 17;
-        return <g class="ev"><title>{e.label}: {sub}</title>
-          <line x1={ex} x2={ex} y1={PT} y2={PB} class="ev-line" />
-          <circle cx={ex} cy={ey} r="5" class={`ev-dot ev-${e.curve}`} />
-          <rect x={bx} y={by} width={w} height="36" rx="8" class="ev-box" />
-          <text x={bx + 9} y={by + 15} class="ev-label">{e.label}</text>
-          <text x={bx + 9} y={by + 29} class="ev-sub">{sub}</text>
-        </g>;
-      })}
+        {roast.events.map((e, i) => {
+          const ex = L.x(e.t), ey = L.y(e.temp);
+          const sub = `${n(e.temp)} °C · ${mmss(e.t)}`;
+          if (!L.labels) return <g class="ev"><title>{e.label}: {sub}</title>
+            <line x1={ex} x2={ex} y1={L.PT} y2={L.PB} class="ev-line" />
+            <circle cx={ex} cy={ey} r="7" class={`ev-dot ev-${e.curve}`} />
+            <text x={ex} y={ey + 3.5} text-anchor="middle" class="ev-num">{i + 1}</text>
+          </g>;
+          const w = Math.max(e.label.length * 7.4, sub.length * 6.2) + 18;
+          const bx = e.anchor === 'end' ? ex + e.dx - w : ex + e.dx;
+          const by = ey + e.dy - 17;
+          return <g class="ev"><title>{e.label}: {sub}</title>
+            <line x1={ex} x2={ex} y1={L.PT} y2={L.PB} class="ev-line" />
+            <circle cx={ex} cy={ey} r="5" class={`ev-dot ev-${e.curve}`} />
+            <rect x={bx} y={by} width={w} height="36" rx="8" class="ev-box" />
+            <text x={bx + 9} y={by + 15} class="ev-label">{e.label}</text>
+            <text x={bx + 9} y={by + 29} class="ev-sub">{sub}</text>
+          </g>;
+        })}
 
-      {bands.map((b, i) => {
-        const by = BAND_Y + i * (BAND_H + BAND_GAP);
-        return <g class="band">
-          <text x={PL - 8} y={by + 14} text-anchor="end" class="band-label">{b.label}</text>
-          {b.rows.map(([s, e, l]) => <g>
-            <rect x={x(s)} y={by} width={Math.max(0, x(e) - x(s) - 1.5)} height={BAND_H} rx="3" fill={b.color} fill-opacity={0.35 + 0.65 * (l - b.min) / (b.max - b.min)}><title>{b.label} {b.prefix}{l}: {mmss(s)} – {mmss(e)}</title></rect>
-            {x(e) - x(s) > 26 && <text x={(x(s) + x(e)) / 2} y={by + 14.5} text-anchor="middle" class="band-text">{b.prefix}{l}</text>}
-          </g>)}
-        </g>;
-      })}
+        {bands.map((b, i) => {
+          const by = L.bandY + i * (L.bandH + L.bandGap);
+          return <g>
+            <text x={L.PL - 6} y={by + L.bandH - 5} text-anchor="end" class="band-label">{L.bandLabels[i]}</text>
+            {b.rows.map(([s, e, l]) => <g>
+              <rect x={L.x(s)} y={by} width={Math.max(0, L.x(e) - L.x(s) - 1.5)} height={L.bandH} rx="3" fill={b.color} fill-opacity={0.35 + (0.65 * (l - b.min)) / (b.max - b.min)}><title>{b.label} {b.prefix}{l}: {mmss(s)} – {mmss(e)}</title></rect>
+              {L.x(e) - L.x(s) > (L.labels ? 26 : 22) && <text x={(L.x(s) + L.x(e)) / 2} y={by + L.bandH - 5} text-anchor="middle" class="band-text">{b.prefix}{l}</text>}
+            </g>)}
+          </g>;
+        })}
 
-      <g class="hover" pointer-events="none" style="display:none">
-        <line class="h-line" y1={PT} y2={PB} />
-        <circle class="h-dot" data-k="bt" r="4.5" />
-        <circle class="h-dot" data-k="ibts" r="4.5" />
-        <circle class="h-dot" data-k="rorBt" r="4" />
-        <circle class="h-dot" data-k="rorIbts" r="4" />
-      </g>
-      <rect class="hit" x={PL} y={PT} width={PR - PL} height={PB - PT} fill="transparent" />
-    </svg>
+        <g class="hover" pointer-events="none" style="display:none">
+          <line class="h-line" y1={L.PT} y2={L.PB} />
+          <circle class="h-dot" data-k="bt" r="4.5" />
+          <circle class="h-dot" data-k="ibts" r="4.5" />
+          <circle class="h-dot" data-k="rorBt" r="4" />
+          <circle class="h-dot" data-k="rorIbts" r="4" />
+        </g>
+        <rect class="hit" x={L.PL} y={L.PT} width={L.PR - L.PL} height={L.PB - L.PT} fill="transparent" />
+      </svg>
+    ))}
     <div class="roast-tip" hidden>
       <strong class="tip-time"></strong>
       <span><i class="k-bt"></i>Sonda<b data-v="bt"></b></span>
@@ -129,6 +142,10 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
       <em class="tip-ctl"></em>
     </div>
   </div>
+
+  <ol class="roast-events" aria-label="Momentos clave">
+    {roast.events.map((e, i) => <li><b class={`ev-chip ev-chip-${e.curve}`}>{i + 1}</b><span>{e.label}</span><em>{n(e.temp)} °C · {mmss(e.t)}</em></li>)}
+  </ol>
 
   <ul class="roast-legend">
     <li><i class="k-bt"></i>Temperatura del grano · sonda</li>
@@ -143,12 +160,7 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
   type Pts = number[][];
   document.querySelectorAll<HTMLElement>('.roast-chart').forEach(chart => {
     const d = JSON.parse(chart.dataset.roast || '{}');
-    const svg = chart.querySelector('svg')!;
-    const hover = svg.querySelector<SVGGElement>('.hover')!;
-    const line = svg.querySelector<SVGLineElement>('.h-line')!;
     const tip = chart.querySelector<HTMLElement>('.roast-tip')!;
-    const X = (t: number) => d.PL + ((d.PR - d.PL) * t) / d.T;
-    const Y = (v: number) => d.PB - ((d.PB - d.PT) * v) / d.VMAX;
     const at = (a: Pts, t: number) => {
       if (t < a[0][0] || t > a[a.length - 1][0]) return null;
       let lo = 0, hi = a.length - 1;
@@ -159,39 +171,51 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
     const seg = (rows: number[][], t: number) => (rows.find(r => t >= r[0] && t < r[1]) || rows[rows.length - 1])[2];
     const mmss = (t: number) => `${Math.floor(Math.round(t) / 60)}:${String(Math.round(t) % 60).padStart(2, '0')}`;
     const fmt = (v: number | null, u: string) => (v === null ? '—' : `${v.toFixed(1).replace('.', ',')} ${u}`);
-    function move(clientX: number) {
-      const r = svg.getBoundingClientRect();
-      const vx = ((clientX - r.left) / r.width) * svg.viewBox.baseVal.width;
-      const t = Math.max(0, Math.min(d.T, ((vx - d.PL) / (d.PR - d.PL)) * d.T));
-      const px = X(t);
-      hover.style.display = '';
-      line.setAttribute('x1', String(px)); line.setAttribute('x2', String(px));
-      (['bt', 'ibts', 'rorBt', 'rorIbts'] as const).forEach(k => {
-        const ror = k.startsWith('ror');
-        const v = at(d.series[k], t);
-        const dot = svg.querySelector<SVGCircleElement>(`.h-dot[data-k="${k}"]`)!;
-        const vy = v === null ? 0 : Y(ror ? v * 10 : v);
-        if (v === null || vy < d.PT) dot.style.display = 'none';
-        else { dot.style.display = ''; dot.setAttribute('cx', String(px)); dot.setAttribute('cy', String(vy)); }
-        tip.querySelector(`[data-v="${k}"]`)!.textContent = fmt(v, ror ? '°C/min' : '°C');
-      });
-      tip.querySelector('.tip-time')!.textContent = `${mmss(t)} min`;
-      tip.querySelector('.tip-ctl')!.textContent = `P${seg(d.power, t)} · F${seg(d.fan, t)} · D${seg(d.drum, t)}`;
-      tip.hidden = false;
-      const left = (px / svg.viewBox.baseVal.width) * r.width;
-      const flip = left + tip.offsetWidth + 16 > r.width;
-      tip.style.left = `${flip ? left - tip.offsetWidth - 14 : left + 14}px`;
-    }
-    const hit = svg.querySelector('.hit')!;
-    hit.addEventListener('pointermove', e => move((e as PointerEvent).clientX));
-    hit.addEventListener('pointerdown', e => move((e as PointerEvent).clientX));
-    hit.addEventListener('pointerleave', () => { hover.style.display = 'none'; tip.hidden = true; });
+
+    chart.querySelectorAll<SVGSVGElement>('.roast-svg').forEach(svg => {
+      const g = JSON.parse(svg.dataset.geo || '{}');
+      const hover = svg.querySelector<SVGGElement>('.hover')!;
+      const line = svg.querySelector<SVGLineElement>('.h-line')!;
+      const X = (t: number) => g.PL + ((g.PR - g.PL) * t) / d.T;
+      const Y = (v: number) => g.PB - ((g.PB - g.PT) * v) / d.VMAX;
+      function move(clientX: number) {
+        const r = svg.getBoundingClientRect();
+        const vbW = svg.viewBox.baseVal.width;
+        const vx = ((clientX - r.left) / r.width) * vbW;
+        const t = Math.max(0, Math.min(d.T, ((vx - g.PL) / (g.PR - g.PL)) * d.T));
+        const px = X(t);
+        hover.style.display = '';
+        line.setAttribute('x1', String(px)); line.setAttribute('x2', String(px));
+        (['bt', 'ibts', 'rorBt', 'rorIbts'] as const).forEach(k => {
+          const ror = k.startsWith('ror');
+          const v = at(d.series[k], t);
+          const dot = svg.querySelector<SVGCircleElement>(`.h-dot[data-k="${k}"]`)!;
+          const vy = v === null ? 0 : Y(ror ? v * 10 : v);
+          if (v === null || vy < g.PT) dot.style.display = 'none';
+          else { dot.style.display = ''; dot.setAttribute('cx', String(px)); dot.setAttribute('cy', String(vy)); }
+          tip.querySelector(`[data-v="${k}"]`)!.textContent = fmt(v, ror ? '°C/min' : '°C');
+        });
+        tip.querySelector('.tip-time')!.textContent = `${mmss(t)} min`;
+        tip.querySelector('.tip-ctl')!.textContent = `P${seg(d.power, t)} · F${seg(d.fan, t)} · D${seg(d.drum, t)}`;
+        tip.hidden = false;
+        const left = (px / vbW) * r.width;
+        const flip = left + tip.offsetWidth + 16 > r.width;
+        tip.style.left = `${Math.max(0, flip ? left - tip.offsetWidth - 14 : left + 14)}px`;
+      }
+      const hide = () => { hover.style.display = 'none'; tip.hidden = true; };
+      const hit = svg.querySelector('.hit')!;
+      hit.addEventListener('pointermove', e => move((e as PointerEvent).clientX));
+      hit.addEventListener('pointerdown', e => move((e as PointerEvent).clientX));
+      hit.addEventListener('pointerleave', e => { if ((e as PointerEvent).pointerType === 'mouse') hide(); });
+      hit.addEventListener('pointerup', e => { if ((e as PointerEvent).pointerType !== 'mouse') setTimeout(hide, 2500); });
+    });
   });
 </script>
 
 <style>
-  .roast{margin:0 0 4rem;padding:clamp(1.25rem,4vw,2.5rem);border:1.5px solid var(--ink);border-radius:1.25rem}
+  .roast{min-width:0;margin:0 0 4rem;padding:clamp(1.1rem,4vw,2.5rem);border:1.5px solid var(--ink);border-radius:1.25rem}
   .roast-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1.25rem}
+  .roast-head>div{min-width:0}
   .roast .small{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--green)}
   .roast h2{font-size:clamp(1.7rem,3vw,2.4rem);margin:.5rem 0 .35rem}
   .roast-meta{font-size:.9rem;font-weight:600}
@@ -200,14 +224,15 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
   .roast-phases i{width:.7rem;height:.7rem;border-radius:50%;background:var(--phase)}
   .roast-phases strong{font-weight:700}.roast-phases em{font-style:normal;opacity:.65}
   .roast-stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.75rem;margin:1.75rem 0}
-  .roast-stats div{padding:.9rem 1rem;border-radius:1rem;background:var(--ink);color:var(--cream)}
+  .roast-stats div{min-width:0;padding:.9rem 1rem;border-radius:1rem;background:var(--ink);color:var(--cream)}
   .roast-stats div:first-child{background:var(--orange);color:var(--ink)}
   .roast-stats dt{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--sun)}
   .roast-stats div:first-child dt{color:var(--ink)}
   .roast-stats dd{margin:.3rem 0 0;font:800 1.45rem/1.1 "Source Serif 4",Georgia,serif}
   .roast-stats small{display:block;margin-top:.3rem;font:400 .78rem Archivo,sans-serif;opacity:.8}
-  .roast-chart{position:relative;margin:0 -.25rem;overflow-x:auto;overscroll-behavior-x:contain}
-  .roast-chart svg{display:block;width:100%;min-width:640px;height:auto;font-family:Archivo,system-ui,sans-serif;touch-action:pan-y}
+  .roast-chart{position:relative;min-width:0}
+  .roast-svg{display:block;width:100%;height:auto;font-family:Archivo,system-ui,sans-serif;touch-action:pan-y}
+  .roast-svg--compact{display:none}
   .plot-bg{fill:#fffaf0;stroke:var(--ink);stroke-opacity:.25}
   .grid line{stroke:var(--ink);stroke-opacity:.08}
   .t-axis{font-size:12px;fill:var(--ink);fill-opacity:.7}
@@ -219,6 +244,7 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
   .c-roribts{stroke:var(--green);stroke-width:2}
   .ev-line{stroke:var(--ink);stroke-opacity:.35;stroke-dasharray:3 4}
   .ev-dot{fill:var(--cream);stroke-width:2.5}.ev-bt{stroke:var(--orange)}.ev-ibts{stroke:var(--wine)}
+  .ev-num{font-size:10px;font-weight:700;fill:var(--ink)}
   .ev-box{fill:var(--ink)}
   .ev-label{font-size:12.5px;font-weight:700;fill:var(--cream)}
   .ev-sub{font-size:11px;fill:var(--sun)}
@@ -235,11 +261,25 @@ const hoverData = JSON.stringify({ T, PL, PR, PT, PB, VMAX, series, power: roast
   .roast-tip em{margin-top:.25rem;font-style:normal;color:var(--sun);font-weight:600}
   .roast-tip i,.roast-legend i{display:inline-block;width:.65rem;height:.65rem;border-radius:50%;flex:0 0 auto}
   .k-bt{background:var(--orange)}.k-ibts{background:var(--wine)}.k-rorbt{background:#c99a2e}.k-roribts{background:var(--green)}
+  .roast-events{display:none;gap:.35rem;margin:1rem 0 0;padding:0;list-style:none;font-size:.85rem}
+  .roast-events li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.55rem}
+  .roast-events em{font-style:normal;font-weight:600;opacity:.75;white-space:nowrap}
+  .ev-chip{display:grid;place-items:center;width:1.35rem;height:1.35rem;border-radius:50%;border:2.5px solid;font-size:.7rem;background:var(--cream)}
+  .ev-chip-bt{border-color:var(--orange)}.ev-chip-ibts{border-color:var(--wine)}
   .roast-legend{display:flex;flex-wrap:wrap;gap:.5rem 1.25rem;margin:1rem 0 .5rem;padding:0;list-style:none;font-size:.85rem;font-weight:600}
   .roast-legend li{display:flex;align-items:center;gap:.45rem}
   .roast-legend i{width:1.4rem;height:.28rem;border-radius:99px}
   .roast-note{max-width:75ch;font-size:.8rem;opacity:.7}
-  .roast-swipe{display:none}
   @media(max-width:900px){.roast-stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
-  @media(max-width:650px){.roast{margin-bottom:2.5rem}.roast-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}.roast-stats div{padding:.8rem .85rem}.roast-stats dt{font-size:.6rem;letter-spacing:.08em}.roast-stats dd{font-size:1.2rem}.roast-phases li{font-size:.78rem;padding:.3rem .65rem}.roast-swipe{display:block;margin:0 0 .4rem;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--green)}.roast-chart{margin:0 calc(-1 * clamp(1.25rem,4vw,2.5rem));padding:0 clamp(1.25rem,4vw,2.5rem)}}
+  @media(max-width:650px){
+    .roast{margin-bottom:2.5rem}
+    .roast-svg--wide{display:none}.roast-svg--compact{display:block}
+    .roast-events{display:grid}
+    .roast-tip{top:1.5rem;min-width:11rem;font-size:.75rem}
+    .roast-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+    .roast-stats div{padding:.8rem .85rem}.roast-stats dt{font-size:.6rem;letter-spacing:.08em}.roast-stats dd{font-size:1.2rem}
+    .roast-phases li{font-size:.78rem;padding:.3rem .65rem}
+    .t-axis{font-size:11px}.band-label{font-size:11px}.band-text{font-size:10.5px}
+    .c-bt,.c-ibts{stroke-width:2.2}.c-rorbt{stroke-width:1.2}.c-roribts{stroke-width:1.7}
+  }
 </style>
