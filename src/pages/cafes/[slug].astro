@@ -2,6 +2,8 @@
 import { products } from '../../data/products';
 import { config } from '../../data/config';
 import PageTransition from '../../components/PageTransition.astro';
+import RoastProfile from '../../components/RoastProfile.astro';
+import { roasts } from '../../data/roasts';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
 
@@ -12,6 +14,7 @@ export function getStaticPaths() {
 const { coffee } = Astro.props;
 const cop = (n: number) => '$' + n.toLocaleString('es-CO');
 const gallery = coffee.gallery?.length ? coffee.gallery : [coffee.img];
+const roast = roasts[coffee.id];
 ---
 <!doctype html>
 <html lang="es">
@@ -97,6 +100,8 @@ const gallery = coffee.gallery?.length ? coffee.gallery : [coffee.img];
         <p>{coffee.expectation}</p>
       </article>
     </section>
+
+    {roast && <RoastProfile roast={roast} name={coffee.name} />}
 
     <aside class="open-guide">
       <span class="guide-mark" aria-hidden="true"></span>
