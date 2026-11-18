@@ -6,6 +6,7 @@ export type Product = {
   gallery?: string[];
   imageAlt?: string;
   galleryAlts?: string[];
+  galleryContain?: number[];
   logoColor?: string;
   // solo cafés:
   tag?: string; process?: string; producer?: string; farm?: string; origin?: string;
@@ -35,6 +36,7 @@ export const products: Product[] = [
     img: '/img/bourbon-aji-gemini.jpeg', imageAlt: 'Bolsa de Bourbon Ají junto a una taza de café y frutos rojos',
     gallery: ['/img/bourbon-aji-gemini.jpeg', '/img/bourbon-aji-bag.jpg', '/labels/bourbon-aji.svg'],
     galleryAlts: ['Bolsa de Bourbon Ají junto a una taza de café y frutos rojos', 'Bolsa de Bourbon Ají fotografiada sobre una mesa de café', 'Etiqueta ilustrada del café Bourbon Ají'],
+    galleryContain: [2],
     tag: 'Una variedad que no pasa desapercibida', process: 'Natural',
     why: 'Nos ganó la curiosidad desde el nombre: Bourbon Ají, cultivado por Jhonatan Nieto y Johanny González en la finca Nuevo Sol. Es un café de proceso natural que nos entusiasma compartir contigo por su carácter y profundidad en taza.',
     expectation: 'Imaginamos una taza con carácter, donde la dulzura de los frutos rojos se cruza con notas profundas de chocolate. Tómalo como una invitación, no como un mapa: cada preparación tiene algo distinto que contar.',
