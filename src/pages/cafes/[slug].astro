@@ -46,7 +46,7 @@ const roast = roasts[coffee.id];
         <div class="coffee-image" id="coffee-gallery-track">
           {gallery.map((image, index) => <figure class="coffee-slide" aria-hidden={index !== 0}>
             <button class="gallery-open" type="button" aria-label={`Ampliar imagen de ${coffee.name}`}>
-              <img src={image} alt={index === 0 && coffee.imageAlt ? coffee.imageAlt : index === 0 && coffee.gallery?.length ? `${coffee.name} servido junto a su empaque` : `Empaque de ${coffee.name}`} loading={index === 0 ? 'eager' : 'lazy'} />
+              <img src={image} alt={coffee.galleryAlts?.[index] || (index === 0 && coffee.imageAlt ? coffee.imageAlt : index === 0 && coffee.gallery?.length ? `${coffee.name} servido junto a su empaque` : `Empaque de ${coffee.name}`)} loading={index === 0 ? 'eager' : 'lazy'} />
             </button>
           </figure>)}
         </div>
