@@ -4,11 +4,12 @@ export type Product = {
   name: string; price: number; price340?: number; img?: string; note?: string;
   available?: boolean;
   gallery?: string[];
+  imageAlt?: string;
   logoColor?: string;
   // solo cafés:
   tag?: string; process?: string; producer?: string; farm?: string; origin?: string;
   why?: string; expectation?: string;
-  theme?: 'sol' | 'arco' | 'olas';
+  theme?: 'sol' | 'arco' | 'olas' | 'aji';
 };
 
 export const products: Product[] = [
@@ -29,6 +30,11 @@ export const products: Product[] = [
     why: 'El Bourbon Rojo fue un gran descubrimiento durante una cata con Marlon. Desde el primer instante, su aroma y luego su fragancia nos cautivaron. Al probarlo, encontramos un café muy expresivo, pero nada invasivo, con matices llamativos que ya resultan atractivos desde el olfato.',
     expectation: 'Su proceso hace que esos aromas sean muy atractivos y, en taza, la experiencia se convierte para nosotros en un viaje sin regreso. Nos parece un café expresivo y envolvente; te invitamos a descubrir qué despierta en ti.', producer: 'Marlon Bolaños',
     farm: 'The Three Coffee Farmers', origin: 'San Agustín, Huila · 1.700 msnm' },
+  { id: 'bourbon-aji', category: 'cafe', theme: 'aji', logoColor: '#D9A441', name: 'Bourbon Ají', price: 57000, price340: 61000,
+    img: '/labels/bourbon-aji.svg', imageAlt: 'Etiqueta ilustrada del café Bourbon Ají', tag: 'Una variedad que no pasa desapercibida', process: 'Natural',
+    why: 'Nos ganó la curiosidad desde el nombre: Bourbon Ají, cultivado por Jhonatan Nieto y Johanny González en la finca Nuevo Sol. Es un café de proceso natural que nos entusiasma compartir contigo por su carácter y profundidad en taza.',
+    expectation: 'Imaginamos una taza con carácter, donde la dulzura de los frutos rojos se cruza con notas profundas de chocolate. Tómalo como una invitación, no como un mapa: cada preparación tiene algo distinto que contar.',
+    producer: 'Jhonatan Nieto & Johanny González', farm: 'Nuevo Sol', origin: 'Pitalito, Huila · 1.600 msnm' },
 
   { id: 'kalita', category: 'metodo', name: 'Kalita Wave 155', price: 155000, img: '/img/kalita-wave.jpg', note: 'Dripper de fondo plano tamaño 155, pensado para una extracción pareja.' },
 

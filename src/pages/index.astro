@@ -6,7 +6,7 @@ import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
 const cop = (n: number) => '$' + n.toLocaleString('es-CO');
-const cafes = products.filter(p => p.category === 'cafe');
+const cafes = products.filter(p => p.category === 'cafe' && !['bourbon', 'sl28'].includes(p.id));
 const metodos = products.filter(p => p.category === 'metodo');
 const filtros = products.filter(p => p.category === 'filtro');
 ---
@@ -49,11 +49,11 @@ const filtros = products.filter(p => p.category === 'filtro');
     </section>
 
     <section id="cafes" class="block">
-      <h2>Los tres cafés</h2>
+      <h2>Nuestros cafés</h2>
       <div class="grid cafes">
         {cafes.map(p => (
           <article class={`card cafe ${p.theme}`}>
-            <div class="photo"><img src={p.img} alt={p.gallery ? `${p.name} servido junto a su empaque` : `Bolsa de café ${p.name}`} loading="lazy" /></div>
+            <div class="photo"><img src={p.img} alt={p.imageAlt || (p.gallery ? `${p.name} servido junto a su empaque` : `Bolsa de café ${p.name}`)} loading="lazy" /></div>
             <div class="label">
               <p class="small">{p.tag}</p>
               <h3>{p.name}</h3>
@@ -398,7 +398,9 @@ const filtros = products.filter(p => p.category === 'filtro');
     .cafe.sol{--bg:var(--orange);--accent:var(--purple)}
     .cafe.arco{--bg:var(--night);--accent:var(--pink)}
     .cafe.olas{--bg:var(--wine);--accent:var(--wine)}
+    .cafe.aji{--bg:#2A0A18;--accent:#D9A441}
     .cafe.sol .rule{color:var(--orange)} .cafe.arco .rule{color:var(--green)}
+    .cafe.aji .photo img{object-fit:contain;padding:.75rem}
     .photo{position:relative;aspect-ratio:5/4;overflow:hidden;background:var(--bg)}
     .photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
     .photo:after{content:"";position:absolute;inset:auto 0 0;height:14%;background:linear-gradient(to bottom,transparent,var(--bg));pointer-events:none}
