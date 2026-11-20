@@ -1,97 +1,97 @@
 ---
+import Page from '../layouts/Page.astro';
 import { config } from '../data/config';
-import PageTransition from '../components/PageTransition.astro';
-import Analytics from '@vercel/analytics/astro';
-import SpeedInsights from '@vercel/speed-insights/astro';
+import { products } from '../data/products';
+import { farmPhotos, farmCopy } from '../data/farm';
+
+// Fincas con las que trabajamos hoy, tomadas del catálogo para que nunca se desactualicen.
+const farms = Object.values(
+  products.filter(p => p.category === 'cafe' && p.farm).reduce<Record<string, { farm: string; producers: string; origin: string; coffees: string[]; soon: string[] }>>((acc, p) => {
+    const entry = acc[p.farm!] ??= { farm: p.farm!, producers: p.producer ?? '', origin: p.origin ?? '', coffees: [], soon: [] };
+    (p.available === false ? entry.soon : entry.coffees).push(p.name);
+    return acc;
+  }, {}),
+);
+const showPlaceholders = import.meta.env.DEV && farmPhotos.length === 0;
 ---
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <title>Nosotros · {config.brand}</title>
-  <meta name="description" content="Conoce por qué en ØPPOSITE elegimos cafés colombianos fuera de lo común." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,600..800;1,8..60,400&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet" />
-</head>
-<body>
-  <PageTransition />
-  <Analytics />
-  <SpeedInsights />
-  <header class="top">
-    <a class="logo" href="/#top" aria-label={config.brand}><img src="/opposite-logo.svg" alt="ØPPOSITE" /></a>
-    <button class="menu-toggle" id="nav-toggle" aria-label="Abrir menú" aria-controls="main-nav" aria-expanded="false"><span></span><span></span><span></span></button>
-    <nav id="main-nav"><a href="/#cafes">Cafés</a><a href="/#metodos">Métodos</a><a href="/#filtros">Filtros</a><a href="/nosotros" aria-current="page">Nosotros</a></nav>
-    <a class="cartbtn" href="/#cafes">Ver cafés</a>
-  </header>
+<Page title="Nosotros" description="Conoce a ØPPOSITE: cafés colombianos fuera de lo común, las fincas de donde vienen y la gente detrás." current="nosotros">
+  <section class="brand-hero" id="top">
+    <div class="hero-rings" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <p class="eyebrow">Nosotros</p>
+      <h1>Cafés colombianos que se salen del camino habitual.</h1>
+      <p class="hero-intro">Elegimos pocos cafés, con procesos y variedades poco comunes, y te contamos de quién y de dónde vienen.</p>
+      <div class="hero-actions"><a class="btn btn-sun" href="/historia">Lee cómo empezó</a><a class="text-link" href="/#cafes">Ver los cafés <span aria-hidden="true">↗</span></a></div>
+    </div>
+    <img class="hero-mark" src="/opposite-transition-mark.svg" alt="" aria-hidden="true" />
+  </section>
 
-  <main>
-    <section class="brand-hero" id="top">
-      <div class="hero-rings" aria-hidden="true"></div>
-      <div class="hero-copy">
-        <p class="eyebrow">Una mirada distinta al café colombiano</p>
-        <h1>El café también puede tomar <span>otro camino.</span></h1>
-        <p class="hero-intro">Buscamos cafés que se salen de lo habitual y abrimos espacio para que cada persona descubra su propia experiencia.</p>
-        <div class="hero-actions"><a class="btn btn-sun" href="#historia">Conoce nuestra historia <span aria-hidden="true">↓</span></a><a class="text-link" href="/#cafes">Conoce los cafés <span aria-hidden="true">↗</span></a></div>
-      </div>
-      <img class="hero-mark" src="/opposite-transition-mark.svg" alt="" aria-hidden="true" />
-      <p class="hero-caption">ØPPOSITE <span>·</span> CAFÉ PARA DESCUBRIR</p>
+  <section class="about-intro">
+    <h2>Un proyecto para descubrir, no para dictar.</h2>
+    <div class="about-copy">
+      <p>ØPPOSITE nació para explorar y compartir cafés colombianos poco comunes, procesos interesantes y perfiles que inviten a descubrir algo diferente.</p>
+      <p>No queremos decirte cómo debe saber un café ni qué tienes que encontrar en tu taza. Compartimos lo que nos emociona y dejamos que construyas tu propia experiencia.</p>
+    </div>
+  </section>
+
+  <section class="manifesto" aria-labelledby="values-title">
+    <h2 id="values-title">Lo que nos guía</h2>
+    <div class="manifesto-grid">
+      <article><h3>Elegimos con curiosidad</h3><p>Nos atraen las variedades y los procesos que no aparecen en todas partes y que nos invitan a mirar de nuevo.</p></article>
+      <article><h3>Reconocemos el origen</h3><p>Cada café viene del trabajo de personas y fincas con una historia propia. Queremos acercarte a ella.</p></article>
+      <article><h3>Dejamos espacio para ti</h3><p>Compartimos lo que nos mueve, sin convertir nuestras impresiones en reglas para tu taza.</p></article>
+    </div>
+  </section>
+
+  <section class="farms" aria-labelledby="farms-title">
+    <h2 id="farms-title">Las fincas detrás de cada taza</h2>
+    <ul class="farm-list">
+      {farms.map(f => (
+        <li>
+          <h3>{f.farm}</h3>
+          <p>{f.producers}</p>
+          <p class="farm-meta">{f.origin}</p>
+          {f.coffees.length > 0 && <p class="farm-meta">En nuestra selección: {f.coffees.join(', ')}</p>}
+          {f.soon.length > 0 && <p class="farm-meta">Próximamente: {f.soon.join(', ')}</p>}
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  {(farmPhotos.length > 0 || showPlaceholders) && (
+    <section class="gallery-section" aria-labelledby="gallery-title">
+      <div class="gallery-head"><h2 id="gallery-title">{farmCopy.title}</h2><p>{farmCopy.intro}</p></div>
+      <ul class="gallery">
+        {farmPhotos.map(photo => (
+          <li class={photo.wide ? 'wide' : ''}>
+            <figure><img src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />{photo.caption && <figcaption>{photo.caption}</figcaption>}</figure>
+          </li>
+        ))}
+        {showPlaceholders && [1, 2, 3].map(n => <li class={n === 1 ? 'wide' : ''}><div class="photo-slot">Foto {n} de la finca (solo visible en desarrollo)</div></li>)}
+      </ul>
     </section>
+  )}
 
-    <section class="story-section" id="historia">
-      <div class="story-heading"><p class="eyebrow">La historia detrás de la búsqueda</p><h2>Antes del café de especialidad, hubo un tinto.</h2></div>
-      <div class="story-copy">
-        <p>Empecé tomando tinto desde muy joven. El café siempre ha formado parte de mi vida: mis abuelos son campesinos y crecí conociendo de cerca todo lo que hay detrás de una taza.</p>
-        <p>Con el tiempo llegó el espresso y, con él, mi primer acercamiento al café de especialidad. Cuando compré un Bourbon Naranja de Marlon Bolaños y mi primera V60 Suiren, descubrí los métodos de filtrado. Ahí nació una pasión que transformó mi manera de entender y disfrutar el café.</p>
-        <p>De esa primera experiencia surgió también una idea: crear ØPPOSITE e iniciar este camino con un café de Marlon. Un proyecto para explorar y compartir cafés colombianos poco comunes, procesos interesantes y perfiles que inviten a descubrir algo diferente.</p>
-        <p>No queremos dictar cómo debe saber un café ni decirte qué tienes que encontrar en tu taza. Queremos compartir lo que nos emociona, despertar curiosidad y dejar que cada persona construya su propia experiencia.</p>
-      </div>
-    </section>
+  <section class="closing-note">
+    <img src="/opposite-transition-mark.svg" alt="" aria-hidden="true" />
+    <p>¿Te gustaría hacer parte de esto?</p>
+    <a href="/trabaja-con-nosotros">Trabaja con nosotros <span aria-hidden="true">→</span></a>
+  </section>
+</Page>
 
-    <section class="manifesto" aria-labelledby="manifesto-title">
-      <p class="eyebrow">¿Por qué ØPPOSITE?</p>
-      <h2 id="manifesto-title">Porque lo distinto <span>merece un lugar.</span></h2>
-      <div class="manifesto-grid">
-        <article><span class="manifesto-number">01</span><h3>Elegimos con curiosidad</h3><p>Nos atraen las variedades y los procesos que no aparecen en todas partes y que nos invitan a mirar de nuevo.</p></article>
-        <article><span class="manifesto-number">02</span><h3>Reconocemos el origen</h3><p>Cada café viene del trabajo de personas y fincas con una historia propia. Queremos acercarte a ella.</p></article>
-        <article><span class="manifesto-number">03</span><h3>Dejamos espacio para ti</h3><p>Compartimos lo que nos mueve, sin convertir nuestras impresiones en reglas para tu taza.</p></article>
-      </div>
-    </section>
-
-    <section class="closing-note"><img src="/opposite-transition-mark.svg" alt="" aria-hidden="true" /><p>Una taza. Muchas maneras de encontrarla.</p><a href="/#cafes">Explora la selección <span aria-hidden="true">→</span></a></section>
-  </main>
-
-  <footer><p>{config.brand} · {config.shipping}</p></footer>
-
-  <script is:inline>
-    const topBar = document.querySelector('.top');
-    const menuButton = document.querySelector('#nav-toggle');
-    const nav = document.querySelector('#main-nav');
-    function closeMenu() { topBar.classList.remove('menu-open'); menuButton.setAttribute('aria-expanded', 'false'); menuButton.setAttribute('aria-label', 'Abrir menú'); }
-    menuButton.addEventListener('click', () => {
-      const isOpen = menuButton.getAttribute('aria-expanded') !== 'true';
-      topBar.classList.toggle('menu-open', isOpen);
-      menuButton.setAttribute('aria-expanded', String(isOpen));
-      menuButton.setAttribute('aria-label', isOpen ? 'Cerrar menú' : 'Abrir menú');
-    });
-    nav.addEventListener('click', event => { if (event.target.closest('a')) closeMenu(); });
-    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
-  </script>
-
-  <style is:global>
-    :root{--cream:#efe6d2;--ink:#1a120d;--orange:#f07b1d;--sun:#f7b32b;--teal:#7fd1c7;--night:#0c0c0c;--green:#0e6b4a;--pink:#e6007e}
-    *{box-sizing:border-box;margin:0}body{font-family:Archivo,system-ui,sans-serif;background:var(--cream);color:var(--ink);line-height:1.6}h1,h2{font-family:"Source Serif 4",Georgia,serif;font-weight:800;line-height:1.05}a{color:inherit}:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
-    .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:1rem;padding:.6rem 1.25rem;background:var(--night);color:var(--cream)}.logo{display:flex;align-items:center;text-decoration:none;white-space:nowrap}.logo img{display:block;width:8.1rem;height:auto}.top nav{position:absolute;left:50%;translate:-50% 0;display:flex;gap:1.25rem;margin:0;white-space:nowrap}.top nav a{text-decoration:none}.top nav a:hover,.top nav a[aria-current="page"]{color:var(--teal)}.top .cartbtn{margin-left:auto}.cartbtn{background:var(--sun);color:var(--ink);border-radius:99px;padding:.45rem 1rem;font:600 .9rem Archivo;text-decoration:none}.menu-toggle{display:none}
-    main{max-width:76rem;margin:auto;padding:1.25rem}.back{display:inline-block;margin:1.25rem 0;text-decoration:none;font-weight:600}.eyebrow{color:var(--green);font-size:.72rem;font-weight:700;letter-spacing:.17em;text-transform:uppercase}.brand-hero{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2rem;min-height:35rem;overflow:hidden;margin-top:.5rem;padding:clamp(2.5rem,7vw,6rem);border-radius:1.5rem;background:radial-gradient(circle at 82% 30%,#63d6a322,transparent 28%),linear-gradient(118deg,#0b2924 0%,#105342 53%,#123d35 100%);color:var(--cream)}.hero-rings{position:absolute;z-index:-1;inset:-40% -10% -70% 38%;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 2.4rem,rgba(127,209,199,.2) 2.45rem 2.52rem)}.hero-copy{position:relative;z-index:1;max-width:44rem}.brand-hero .eyebrow{color:var(--teal)}.brand-hero h1{max-width:12ch;margin:1.2rem 0;font-size:clamp(3.2rem,8vw,6.7rem);letter-spacing:-.045em}.brand-hero h1 span{color:#8edfc2}.hero-intro{max-width:36rem;color:#efe6d2e8;font-size:clamp(1rem,2vw,1.18rem)}.hero-mark{position:relative;z-index:2;width:clamp(7rem,16vw,12rem);filter:drop-shadow(0 0 1.5rem #63d6a344);animation:mark-arrive .9s cubic-bezier(.2,.8,.2,1) both}@keyframes mark-arrive{from{opacity:0;transform:scale(.76) rotate(-16deg)}to{opacity:1;transform:scale(1) rotate(0)}}.hero-actions{display:flex;align-items:center;gap:1.5rem;margin-top:2rem}.btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;border-radius:99px;padding:.75rem 1.25rem;font:600 .9rem Archivo;text-decoration:none;transition:transform .2s,background .2s}.btn:hover{transform:translateY(-2px)}.btn-sun{background:var(--sun);color:var(--ink)}.text-link{font-weight:600;text-decoration:none}.text-link:hover{text-decoration:underline;text-underline-offset:.25em}.hero-caption{position:absolute;right:clamp(2.5rem,7vw,6rem);bottom:1.5rem;color:#efe6d2aa;font-size:.66rem;letter-spacing:.16em}.hero-caption span{color:#8edfc2}
-    .story-section{display:grid;grid-template-columns:.82fr 1fr;gap:clamp(2rem,7vw,6rem);padding:clamp(4rem,9vw,7rem) clamp(.25rem,3vw,2rem)}.story-heading h2,.manifesto h2{margin-top:.8rem;font-size:clamp(2.1rem,4.5vw,3.8rem);letter-spacing:-.025em}.story-copy{max-width:42rem}.story-copy p{margin:0 0 1.15rem;font-size:clamp(1rem,1.8vw,1.12rem)}.story-copy p:first-child:first-letter{float:left;margin:.06em .12em 0 0;color:var(--orange);font:800 4.2rem/.8 "Source Serif 4",Georgia,serif}
-    .manifesto{padding:clamp(2rem,6vw,4.5rem);border-radius:1.5rem;background:#ded4bd;color:var(--ink)}.manifesto>.eyebrow{color:var(--green)}.manifesto h2{max-width:15ch}.manifesto h2 span{color:var(--green)}.manifesto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2.5rem}.manifesto-grid article{padding:1.5rem;border-top:1px solid #1a120d55}.manifesto-number{display:block;color:var(--green);font-size:.72rem;font-weight:700;letter-spacing:.14em}.manifesto-grid h3{margin:.9rem 0 .55rem;font:700 1.3rem "Source Serif 4",Georgia,serif}.manifesto-grid p{font-size:.92rem;max-width:32ch}
-    .closing-note{display:flex;align-items:center;gap:1rem;margin:1rem 0 3rem;padding:1.3rem 1.5rem;border-radius:1rem;background:var(--night);color:var(--cream)}.closing-note img{width:2.3rem}.closing-note p{flex:1;font:italic 1.05rem "Source Serif 4",Georgia,serif}.closing-note a{font-weight:600;text-decoration:none}.closing-note a:hover{text-decoration:underline;text-underline-offset:.2em}footer{padding:2rem 1.25rem;text-align:center;font-size:.85rem;background:var(--night);color:var(--cream)}
-    @media(max-width:850px){.brand-hero{min-height:31rem;padding:clamp(2rem,6vw,3.5rem)}.hero-mark{width:clamp(6rem,14vw,8rem)}.manifesto-grid{grid-template-columns:1fr}.manifesto-grid article{padding:1.1rem .25rem}}
-    @media(max-width:650px){.top{gap:.55rem;padding:.6rem .7rem}.logo img{width:6.7rem}.menu-toggle{display:grid;place-content:center;gap:4px;width:2.2rem;height:2.2rem;flex:0 0 auto;border:1px solid #efe6d255;border-radius:50%;background:transparent;color:var(--cream);cursor:pointer}.menu-toggle span{display:block;width:1rem;height:2px;background:currentColor;transition:transform .2s,opacity .2s}.top.menu-open .menu-toggle span:first-child{transform:translateY(6px) rotate(45deg)}.top.menu-open .menu-toggle span:nth-child(2){opacity:0}.top.menu-open .menu-toggle span:last-child{transform:translateY(-6px) rotate(-45deg)}.top nav{display:none;position:absolute;left:0;right:0;top:100%;translate:0 0;width:100%;flex-direction:column;gap:0;padding:.4rem 1rem .8rem;background:var(--night);white-space:normal}.top.menu-open nav{display:flex}.top nav a{padding:.75rem .25rem;font-size:.95rem;border-top:1px solid #efe6d233}.top .cartbtn{margin-left:auto;padding:.4rem .7rem;font-size:.78rem;white-space:nowrap}.brand-hero{grid-template-columns:1fr;gap:1.5rem;min-height:0;padding:2.4rem 1.5rem 4.5rem}.brand-hero h1{max-width:10ch;font-size:clamp(3.15rem,15vw,5rem)}.hero-mark{position:absolute;right:1.4rem;top:1.5rem;width:3.4rem;opacity:.82}.hero-copy{padding-top:3.6rem}.hero-rings{inset:5% -88% -35% 12%}.hero-actions{align-items:flex-start;flex-direction:column;gap:1rem;margin-top:1.5rem}.hero-caption{right:1.5rem;bottom:1.15rem;font-size:.58rem}.story-section{grid-template-columns:1fr;gap:1.3rem;padding:3.5rem .25rem}.manifesto{padding:1.6rem}.closing-note{align-items:flex-start;flex-wrap:wrap}.closing-note img{width:1.8rem}.closing-note p{flex-basis:calc(100% - 3rem)}.closing-note a{margin-left:2.8rem}}
-    @media(prefers-reduced-motion:reduce){.hero-mark{animation:none}.btn{transition:none}}
-
-  </style>
-</body>
-</html>
+<style is:global>
+  .about-intro{display:grid;grid-template-columns:.82fr 1fr;gap:clamp(2rem,7vw,6rem);padding:clamp(3rem,8vw,6rem) clamp(.25rem,3vw,2rem)}
+  .about-intro h2,.farms h2,.gallery-head h2{font-size:clamp(2rem,4.2vw,3.2rem);letter-spacing:-.02em}
+  .about-copy{max-width:65ch}.about-copy p{margin:0 0 1.1rem;font-size:1.0625rem}
+  .farms{padding:clamp(2rem,5vw,3.5rem) clamp(.25rem,3vw,2rem)}
+  .farm-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr));gap:1.5rem;margin:1.75rem 0 0;padding:0;list-style:none}
+  .farm-list li{padding:1.25rem 0 0;border-top:1px solid #1a120d55}.farm-list h3{margin-bottom:.35rem;font:700 1.35rem "Source Serif 4",Georgia,serif}
+  .farm-meta{font-size:.875rem;color:#4f463c}
+  .gallery-section{padding:clamp(2rem,5vw,3.5rem) 0}.gallery-head{display:grid;gap:.5rem;margin:0 clamp(.25rem,3vw,2rem) 1.5rem}.gallery-head p{max-width:65ch}
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:1rem;margin:0;padding:0;list-style:none}
+  .gallery li.wide{grid-column:span 2}.gallery figure{margin:0}.gallery img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:1rem;background:#ded4bd}
+  .gallery figcaption{margin-top:.5rem;font-size:.875rem;color:#4f463c}
+  .photo-slot{display:grid;place-items:center;aspect-ratio:4/3;padding:1rem;border:2px dashed #1a120d66;border-radius:1rem;text-align:center;font-size:.875rem;color:#4f463c}
+  @media(max-width:850px){.about-intro{grid-template-columns:1fr;gap:1.25rem}}
+  @media(max-width:650px){.gallery li.wide{grid-column:auto}}
+</style>
