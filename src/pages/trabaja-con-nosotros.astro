@@ -1,0 +1,149 @@
+---
+import Page from '../layouts/Page.astro';
+import { config } from '../data/config';
+import { jobAreas } from '../data/jobs';
+---
+<Page title="Trabaja con nosotros" description="Cuéntanos quién eres y qué te gustaría hacer en ØPPOSITE. Leemos cada mensaje." current="trabajo">
+  <section class="jobs-page" id="top">
+    <header class="jobs-head">
+      <h1>Trabaja con nosotros</h1>
+      <p>ØPPOSITE es un proyecto pequeño y en crecimiento. Si el café te mueve y quieres aportar, cuéntanos quién eres y qué te gustaría hacer.</p>
+      <p class="jobs-alt">¿Prefieres escribir directo? <a href={`https://wa.me/${config.whatsapp}`} target="_blank" rel="noopener">Abre WhatsApp</a>.</p>
+    </header>
+
+    <form id="job-form" class="job-form" novalidate>
+      <div class="field" data-field="name">
+        <label for="name">Nombre completo <span class="req">(obligatorio)</span></label>
+        <input id="name" name="name" autocomplete="name" required maxlength="100" aria-describedby="name-error" />
+        <p class="error" id="name-error" hidden></p>
+      </div>
+
+      <div class="field" data-field="email">
+        <label for="email">Correo <span class="req">(obligatorio)</span></label>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="160" placeholder="nombre@correo.com" aria-describedby="email-error" />
+        <p class="error" id="email-error" hidden></p>
+      </div>
+
+      <div class="field" data-field="phone">
+        <label for="phone">Teléfono o WhatsApp <span class="opt">(opcional)</span></label>
+        <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="30" aria-describedby="phone-error" />
+        <p class="error" id="phone-error" hidden></p>
+      </div>
+
+      <div class="field" data-field="city">
+        <label for="city">Ciudad donde vives <span class="req">(obligatorio)</span></label>
+        <input id="city" name="city" autocomplete="address-level2" required maxlength="100" aria-describedby="city-error" />
+        <p class="error" id="city-error" hidden></p>
+      </div>
+
+      <div class="field" data-field="area">
+        <label for="area">Área que más te interesa <span class="req">(obligatorio)</span></label>
+        <select id="area" name="area" required aria-describedby="area-error">
+          <option value="">Elige un área</option>
+          {jobAreas.map(area => <option value={area}>{area}</option>)}
+        </select>
+        <p class="error" id="area-error" hidden></p>
+      </div>
+
+      <div class="field" data-field="message">
+        <label for="message">Cuéntanos sobre ti <span class="req">(obligatorio)</span></label>
+        <p class="help" id="message-help">Qué haces hoy, qué te gustaría aportar y qué relación tienes con el café. Mínimo 30 caracteres.</p>
+        <textarea id="message" name="message" rows="6" required maxlength="3000" aria-describedby="message-help message-error"></textarea>
+        <p class="error" id="message-error" hidden></p>
+      </div>
+
+      <div class="field" data-field="link">
+        <label for="link">Enlace a tu hoja de vida, portafolio o LinkedIn <span class="opt">(opcional)</span></label>
+        <input id="link" name="link" type="url" inputmode="url" maxlength="300" placeholder="https://" aria-describedby="link-error" />
+        <p class="error" id="link-error" hidden></p>
+      </div>
+
+      <!-- Campo trampa para bots: invisible para personas y lectores de pantalla. -->
+      <div class="trap" aria-hidden="true"><label for="website">No llenes este campo</label><input id="website" name="website" tabindex="-1" autocomplete="off" /></div>
+
+      <div class="field consent" data-field="consent">
+        <label class="check" for="consent"><input id="consent" name="consent" type="checkbox" required aria-describedby="consent-error" /><span>Autorizo a ØPPOSITE a usar mis datos solo para contactarme sobre esta postulación. <span class="req">(obligatorio)</span></span></label>
+        <p class="error" id="consent-error" hidden></p>
+      </div>
+
+      <p id="form-error" class="form-error" role="alert" hidden></p>
+      <button class="btn btn-sun submit" id="submit" type="submit">Enviar postulación</button>
+    </form>
+
+    <div id="success" class="success" role="status" tabindex="-1" hidden>
+      <h2>Recibimos tu postulación</h2>
+      <p>Gracias por escribirnos. Te enviamos una confirmación a tu correo y, si hay una conversación posible, te contactamos por ahí.</p>
+      <a class="btn btn-sun" href="/nosotros">Conoce a ØPPOSITE</a>
+    </div>
+  </section>
+
+  <script is:inline>
+    const form = document.querySelector('#job-form');
+    const submit = document.querySelector('#submit');
+    const formError = document.querySelector('#form-error');
+    const success = document.querySelector('#success');
+    const rules = {
+      name: v => v.trim() ? '' : 'Escribe tu nombre completo.',
+      email: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) ? '' : 'Escribe un correo como nombre@correo.com.',
+      phone: v => !v.trim() || v.replace(/\D/g, '').length >= 7 ? '' : 'Escribe un teléfono con al menos 7 dígitos.',
+      city: v => v.trim() ? '' : 'Escribe la ciudad donde vives.',
+      area: v => v ? '' : 'Elige el área que más te interesa.',
+      message: v => v.trim().length >= 30 ? '' : 'Cuéntanos un poco más: escribe al menos 30 caracteres.',
+      link: v => !v.trim() || /^https?:\/\/\S+$/i.test(v.trim()) ? '' : 'Pega un enlace completo que empiece por https://.',
+      consent: (_v, el) => el.checked ? '' : 'Marca la casilla para que podamos contactarte.',
+    };
+    const touched = new Set();
+    const control = name => form.elements[name];
+    function show(name, message) {
+      const el = control(name), out = document.querySelector(`#${name}-error`);
+      out.textContent = message; out.hidden = !message;
+      el.setAttribute('aria-invalid', message ? 'true' : 'false');
+      if (!message) el.removeAttribute('aria-invalid');
+    }
+    const check = name => { const el = control(name); const msg = rules[name](el.type === 'checkbox' ? '' : el.value, el); show(name, msg); return msg; };
+    // Validación al salir del campo (no mientras se escribe por primera vez) y el error se quita al corregir.
+    Object.keys(rules).forEach(name => {
+      const el = control(name);
+      el.addEventListener('blur', () => { touched.add(name); check(name); });
+      el.addEventListener('focus', () => { if (el.getAttribute('aria-invalid')) show(name, ''); });
+      el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', () => { if (el.getAttribute('aria-invalid')) show(name, ''); });
+    });
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      formError.hidden = true;
+      const failed = Object.keys(rules).filter(name => check(name));
+      if (failed.length) { control(failed[0]).focus(); return; }
+      submit.disabled = true; const label = submit.textContent; submit.textContent = 'Enviando…';
+      try {
+        const data = Object.fromEntries(new FormData(form));
+        data.consent = control('consent').checked;
+        const response = await fetch('/api/trabaja-con-nosotros', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          Object.entries(result.errors || {}).forEach(([name, msg]) => control(name) && show(name, msg));
+          throw new Error(result.error || 'No pudimos enviar tu postulación. Inténtalo de nuevo en un momento.');
+        }
+        form.hidden = true; document.querySelector('.jobs-head').hidden = true; success.hidden = false; success.focus();
+      } catch (cause) {
+        formError.textContent = cause instanceof Error ? cause.message : 'No pudimos enviar tu postulación. Inténtalo de nuevo.';
+        formError.hidden = false;
+      } finally { submit.disabled = false; submit.textContent = label; }
+    });
+  </script>
+</Page>
+
+<style is:global>
+  .jobs-page{max-width:40rem;margin:0 auto;padding:clamp(2rem,6vw,4rem) 0 clamp(3rem,8vw,5rem)}
+  .jobs-head h1{font-size:clamp(2.4rem,6vw,4rem);letter-spacing:-.03em;margin-bottom:1rem}.jobs-head p{max-width:65ch;margin-bottom:.75rem}.jobs-alt{font-size:.875rem}.jobs-alt a{font-weight:600}
+  .job-form{display:grid;gap:1.5rem;margin-top:2rem;padding:clamp(1.25rem,4vw,2rem);border-radius:1.25rem;background:#fffaf0;border:1px solid #1a120d33}
+  .field{display:grid;gap:.4rem}.field label{font-weight:600;font-size:1rem}.req,.opt{font-weight:400;font-size:.875rem;color:#4f463c}
+  .help{font-size:.875rem;color:#4f463c}
+  .job-form input:not([type=checkbox]),.job-form select,.job-form textarea{width:100%;min-height:2.75rem;padding:.65rem .8rem;border:1px solid #1a120d99;border-radius:.6rem;background:#fff;color:var(--ink);font:400 1rem Archivo,system-ui,sans-serif}
+  .job-form textarea{resize:vertical;line-height:1.5}
+  .job-form [aria-invalid=true]{border-color:#9b0e1a;box-shadow:0 0 0 1px #9b0e1a}
+  .error,.form-error{font-size:.875rem;font-weight:600;color:#9b0e1a}.error[hidden],.form-error[hidden]{display:none}
+  .check{display:grid;grid-template-columns:1.5rem 1fr;gap:.75rem;align-items:start;font-weight:400!important;font-size:.9375rem!important}.check input{width:1.5rem;height:1.5rem;margin-top:.1rem;accent-color:var(--green)}
+  .trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .submit{justify-self:start;min-height:2.75rem;border:0;cursor:pointer}.submit:disabled{opacity:.7;cursor:progress}
+  .success{margin-top:2rem;padding:clamp(1.5rem,5vw,2.5rem);border-radius:1.25rem;background:var(--night);color:var(--cream)}.success:focus{outline:3px solid var(--sun)}.success h2{font-size:clamp(1.8rem,4vw,2.4rem);margin-bottom:.75rem}.success p{max-width:55ch;margin-bottom:1.25rem}.success[hidden]{display:none}
+</style>

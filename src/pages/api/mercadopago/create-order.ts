@@ -7,17 +7,11 @@ import {
   SUPABASE_URL,
 } from 'astro:env/server';
 import { randomUUID } from 'node:crypto';
-import { products } from '../../../data/products';
 import { colombianDepartments, shippingPrice } from '../../../data/locations';
+import { priceCart } from '../../../lib/cart';
+import { emailOwner, summaryFromCheckout } from '../../../lib/orderNotifications';
 
 export const prerender = false;
-
-const grindNames: Record<string, string> = {
-  bean: 'Grano entero',
-  fine: 'Molienda fina para espresso',
-  medium: 'Molienda media para V60, AeroPress u Origami',
-  coarse: 'Molienda gruesa para prensa francesa',
-};
 
 const json = (body: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -109,61 +103,17 @@ export const POST: APIRoute = async ({ request, url }) => {
   if (!address || phoneDigits.length < 7 || phoneDigits.length > 15 || identificationDigits.length < 5 || identificationDigits.length > 15) {
     return json({ error: 'Escribe una dirección, un teléfono y una cédula válidos.' }, 400);
   }
-  if (!Array.isArray(input.items) || input.items.length < 1 || input.items.length > 20) {
-    return json({ error: 'El carrito no tiene productos válidos.' }, 400);
-  }
+  const cart = priceCart(input.items);
+  if (!cart.ok) return json({ error: cart.error }, 400);
 
-  const preferenceItems: Array<{ title: string; quantity: number; unit_price: number; currency_id: string }> = [];
-  const checkoutItems: Array<Record<string, unknown>> = [];
-  let subtotal = 0;
-
-  for (const entry of input.items) {
-    if (typeof entry.key !== 'string' || !Number.isInteger(entry.quantity) || Number(entry.quantity) < 1 || Number(entry.quantity) > 10) {
-      return json({ error: 'Hay un producto o una cantidad inválida en el carrito.' }, 400);
-    }
-
-    const [productId, selectedSize, selectedGrind, ...extra] = entry.key.split('::');
-    if (extra.length) return json({ error: 'Hay una presentación inválida en el carrito.' }, 400);
-    const product = products.find(item => item.id === productId);
-    if (!product) return json({ error: 'No encontramos uno de los productos del carrito.' }, 400);
-    if (product.available === false) return json({ error: 'Uno de los productos seleccionados estará disponible próximamente.' }, 400);
-
-    const quantity = Number(entry.quantity);
-    let unitPrice = product.price;
-    let title = product.name;
-
-    if (product.category === 'cafe') {
-      const size = selectedSize || '250';
-      const grind = selectedGrind || 'bean';
-      if (!['250', '340'].includes(size) || !(grind in grindNames)) {
-        return json({ error: 'Revisa el tamaño y la molienda elegidos para cada café.' }, 400);
-      }
-      if (size === '340') unitPrice = product.price340 ?? product.price;
-      title = `${product.name} · ${size} g · ${grindNames[grind]}`;
-    } else if (selectedSize || selectedGrind) {
-      return json({ error: 'La presentación de uno de los productos no es válida.' }, 400);
-    }
-
-    preferenceItems.push({
-      title,
-      quantity,
-      unit_price: Number(unitPrice), // En preferencias debe ser número entero en COP
-      currency_id: 'COP',
-    });
-    checkoutItems.push({
-      key: entry.key,
-      product_id: product.id,
-      product_name: product.name,
-      category: product.category,
-      size: product.category === 'cafe' ? selectedSize || '250' : null,
-      grind: product.category === 'cafe' ? selectedGrind || 'bean' : null,
-      title,
-      quantity,
-      unit_price: Number(unitPrice),
-      amount: Number(unitPrice) * quantity,
-    });
-    subtotal += Number(unitPrice) * quantity;
-  }
+  const checkoutItems = cart.items;
+  const subtotal = cart.subtotal;
+  const preferenceItems: Array<{ title: string; quantity: number; unit_price: number; currency_id: string }> = cart.items.map(item => ({
+    title: item.title,
+    quantity: item.quantity,
+    unit_price: item.unit_price, // En preferencias debe ser número entero en COP
+    currency_id: 'COP',
+  }));
 
   const deliveryFee = shippingPrice(department, city);
   const shippingPayment = input.shippingPayment === 'on_delivery' ? 'on_delivery' : 'prepaid';
@@ -255,6 +205,13 @@ export const POST: APIRoute = async ({ request, url }) => {
     console.error('Mercado Pago preference creation failed', response.status, JSON.stringify(result));
     return json({ error: 'Mercado Pago no pudo iniciar el pago. Revisa los datos e inténtalo otra vez.' }, 502);
   }
+
+  // Aviso para ti: el cliente ya está en Mercado Pago. El pago se confirma por webhook.
+  // Se espera la respuesta (máx. 6 s) porque en Vercel el trabajo no esperado se corta al responder.
+  await Promise.race([
+    emailOwner(summaryFromCheckout(externalReference, checkoutData, 'pending'), `order-pending-${externalReference}`),
+    new Promise(resolve => setTimeout(resolve, 6000)),
+  ]).catch(() => {});
 
   return json({ checkoutUrl });
 };

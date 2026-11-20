@@ -1,0 +1,33 @@
+---
+import Page from '../layouts/Page.astro';
+---
+<Page title="Nuestra historia" description="De dónde nació ØPPOSITE: del tinto de la infancia al café de especialidad y a la idea de compartir cafés colombianos poco comunes." current="historia">
+  <section class="brand-hero" id="top">
+    <div class="hero-rings" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <p class="eyebrow">Nuestra historia</p>
+      <h1>Antes del café de especialidad, hubo un tinto.</h1>
+      <p class="hero-intro">Así nació ØPPOSITE: de una taza de todos los días, unos abuelos campesinos y una curiosidad que no paró.</p>
+    </div>
+    <img class="hero-mark" src="/opposite-transition-mark.svg" alt="" aria-hidden="true" />
+  </section>
+
+  <article class="story-article">
+    <p>Empecé tomando tinto desde muy joven. El café siempre ha formado parte de mi vida: mis abuelos son campesinos y crecí conociendo de cerca todo lo que hay detrás de una taza.</p>
+    <p>Con el tiempo llegó el espresso y, con él, mi primer acercamiento al café de especialidad. Cuando compré un Bourbon Naranja de Marlon Bolaños y mi primera V60 Suiren, descubrí los métodos de filtrado. Ahí nació una pasión que transformó mi manera de entender y disfrutar el café.</p>
+    <p>De esa primera experiencia surgió también una idea: crear ØPPOSITE e iniciar este camino con un café de Marlon. Un proyecto para explorar y compartir cafés colombianos poco comunes, procesos interesantes y perfiles que inviten a descubrir algo diferente.</p>
+    <p>No queremos dictar cómo debe saber un café ni decirte qué tienes que encontrar en tu taza. Queremos compartir lo que nos emociona, despertar curiosidad y dejar que cada persona construya su propia experiencia.</p>
+  </article>
+
+  <section class="closing-note">
+    <img src="/opposite-transition-mark.svg" alt="" aria-hidden="true" />
+    <p>Una taza. Muchas maneras de encontrarla.</p>
+    <a href="/nosotros">Conoce a ØPPOSITE <span aria-hidden="true">→</span></a>
+  </section>
+</Page>
+
+<style is:global>
+  .story-article{max-width:42rem;margin:0 auto;padding:clamp(3rem,8vw,6rem) .25rem}
+  .story-article p{margin:0 0 1.35rem;font:400 clamp(1.05rem,1.8vw,1.2rem)/1.75 "Source Serif 4",Georgia,serif}
+  .story-article p:first-child:first-letter{float:left;margin:.06em .12em 0 0;color:var(--orange);font:800 4.2rem/.8 "Source Serif 4",Georgia,serif}
+</style>

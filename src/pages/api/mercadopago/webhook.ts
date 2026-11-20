@@ -7,6 +7,7 @@ import {
   SUPABASE_URL,
 } from 'astro:env/server';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { notifyPaidOrder, summaryFromCheckout } from '../../../lib/orderNotifications';
 
 export const prerender = false;
 
@@ -80,6 +81,93 @@ async function saveOrder(orderId: string, order: Record<string, unknown>) {
   }
 }
 
+function supabaseHeaders(extra: Record<string, string> = {}) {
+  return {
+    apikey: SUPABASE_SERVICE_ROLE_KEY || '',
+    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+    'Content-Type': 'application/json',
+    ...extra,
+  };
+}
+
+/** Guarda en la fila del pedido lo que Mercado Pago reporta del pago (estado, detalle y respuesta completa). */
+async function savePayment(reference: string, payment: Record<string, unknown>) {
+  const payer = payment.payer && typeof payment.payer === 'object' ? payment.payer as Record<string, unknown> : {};
+  const response = await fetch(`${supabaseRestUrl('mercadopago_orders')}?external_reference=eq.${encodeURIComponent(reference)}`, {
+    method: 'PATCH',
+    headers: supabaseHeaders({ Prefer: 'return=minimal' }),
+    body: JSON.stringify({
+      status: typeof payment.status === 'string' ? payment.status : null,
+      status_detail: typeof payment.status_detail === 'string' ? payment.status_detail : null,
+      live_mode: typeof payment.live_mode === 'boolean' ? payment.live_mode : null,
+      payer_email: typeof payer.email === 'string' ? payer.email : null,
+      payment_data: payment,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Supabase payment update failed (${response.status}): ${error.slice(0, 300)}`);
+  }
+}
+
+/**
+ * Envía los correos de pago confirmado una sola vez por pedido.
+ * Primero "reclama" la fila (confirmation_email_sent_at pasa de null a la fecha). Solo quien logra
+ * reclamarla envía; si Mercado Pago repite la notificación, la segunda llamada no encuentra nada que reclamar.
+ */
+async function sendConfirmationOnce(reference: string) {
+  const table = supabaseRestUrl('mercadopago_orders');
+  const filter = `external_reference=eq.${encodeURIComponent(reference)}`;
+  const claim = await fetch(`${table}?${filter}&confirmation_email_sent_at=is.null`, {
+    method: 'PATCH',
+    headers: supabaseHeaders({ Prefer: 'return=representation' }),
+    body: JSON.stringify({ confirmation_email_sent_at: new Date().toISOString() }),
+  });
+  if (!claim.ok) {
+    const error = await claim.text();
+    throw new Error(`Supabase email claim failed (${claim.status}): ${error.slice(0, 300)}`);
+  }
+  const rows = await claim.json().catch(() => []);
+  if (!Array.isArray(rows) || rows.length === 0) return; // ya enviado, o el pedido no existe
+
+  const checkout = rows[0]?.checkout_data;
+  if (!checkout || typeof checkout !== 'object') {
+    console.error('Paid order has no checkout_data; confirmation email skipped', reference);
+    return;
+  }
+
+  const ownerNotified = await notifyPaidOrder(summaryFromCheckout(reference, checkout, 'paid'));
+  if (!ownerNotified) {
+    // Libera la reclamación para que el reintento de Mercado Pago vuelva a intentar el envío.
+    await fetch(`${table}?${filter}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders({ Prefer: 'return=minimal' }),
+      body: JSON.stringify({ confirmation_email_sent_at: null }),
+    }).catch(() => {});
+    throw new Error('Owner confirmation email could not be sent');
+  }
+}
+
+async function handlePayment(paymentId: string) {
+  const response = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(paymentId)}`, {
+    headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
+    cache: 'no-store',
+  });
+  if (!response.ok) return new Response('Could not verify payment', { status: 502 });
+  const payment = await response.json() as Record<string, unknown>;
+  if (typeof payment.live_mode === 'boolean' && payment.live_mode !== (MP_ENVIRONMENT === 'production')) {
+    return new Response('Environment mismatch', { status: 400 });
+  }
+  const reference = typeof payment.external_reference === 'string' ? payment.external_reference : '';
+  if (!/^[a-f0-9-]{36}$/i.test(reference)) return new Response(null, { status: 200 }); // pago ajeno a este sitio
+
+  await savePayment(reference, payment);
+  if (payment.status === 'approved') await sendConfirmationOnce(reference);
+  console.info('Mercado Pago payment notification verified', { paymentId, status: payment.status, statusDetail: payment.status_detail });
+  return new Response(null, { status: 200 });
+}
+
 function hasValidSignature(signatureHeader: string | null, requestId: string | null, dataId: string, secret: string) {
   if (!signatureHeader) return false;
   const fields = Object.fromEntries(signatureHeader.split(',').map(part => part.trim().split('=').map(value => value.trim())));
@@ -108,7 +196,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   let body: { type?: unknown; action?: unknown; data?: { id?: unknown } } = {};
   try { body = await request.json(); } catch { /* Some notifications only send query parameters. */ }
   const type = url.searchParams.get('type') || (typeof body.type === 'string' ? body.type : '');
-  if (type && type !== 'order') return new Response(null, { status: 200 });
+  if (type && type !== 'order' && type !== 'payment') return new Response(null, { status: 200 });
 
   const dataId = url.searchParams.get('data.id') || url.searchParams.get('id') || String(body.data?.id || '');
   if (!/^[A-Z0-9-]{8,100}$/i.test(dataId)) return new Response('Invalid order id', { status: 400 });
@@ -117,6 +205,8 @@ export const POST: APIRoute = async ({ request, url }) => {
   }
 
   try {
+    if (type === 'payment') return await handlePayment(dataId);
+
     const response = await fetch(`https://api.mercadopago.com/v1/orders/${encodeURIComponent(dataId)}`, {
       headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
       cache: 'no-store',
@@ -127,6 +217,9 @@ export const POST: APIRoute = async ({ request, url }) => {
       return new Response('Environment mismatch', { status: 400 });
     }
     await saveOrder(dataId, order as Record<string, unknown>);
+    if (order.status === 'processed' && order.status_detail === 'accredited' && typeof order.external_reference === 'string') {
+      await sendConfirmationOnce(order.external_reference);
+    }
     console.info('Mercado Pago order notification verified', { orderId: dataId, status: order.status, statusDetail: order.status_detail });
     return new Response(null, { status: 200 });
   } catch (error) {

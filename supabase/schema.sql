@@ -28,3 +28,8 @@ alter table public.mercadopago_orders enable row level security;
 create unique index if not exists mercadopago_orders_external_reference_key
   on public.mercadopago_orders (external_reference)
   where external_reference is not null;
+
+-- Correos de confirmación: payment_data guarda el pago verificado y
+-- confirmation_email_sent_at evita enviar el mismo correo dos veces si Mercado Pago reintenta el webhook.
+alter table public.mercadopago_orders add column if not exists payment_data jsonb;
+alter table public.mercadopago_orders add column if not exists confirmation_email_sent_at timestamptz;
