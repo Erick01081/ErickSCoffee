@@ -3,6 +3,7 @@ import { config } from '../data/config';
 import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
+import SEO from '../components/SEO.astro';
 ---
 <!doctype html>
 <html lang="es">
@@ -10,8 +11,7 @@ import SpeedInsights from '@vercel/speed-insights/astro';
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <title>Nosotros · {config.brand}</title>
-  <meta name="description" content="Conoce por qué en ØPPOSITE elegimos cafés colombianos fuera de lo común." />
+  <SEO title={`Nosotros · ${config.brand}`} description="Conoce por qué en ØPPOSITE elegimos cafés colombianos fuera de lo común." image="/img/bourbon-served.webp" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,600..800;1,8..60,400&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -24,7 +24,7 @@ import SpeedInsights from '@vercel/speed-insights/astro';
     <a class="logo" href="/#top" aria-label={config.brand}><img src="/opposite-logo.svg" alt="ØPPOSITE" /></a>
     <button class="menu-toggle" id="nav-toggle" aria-label="Abrir menú" aria-controls="main-nav" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav id="main-nav"><a href="/#cafes">Cafés</a><a href="/#metodos">Métodos</a><a href="/#filtros">Filtros</a><a href="/nosotros" aria-current="page">Nosotros</a></nav>
-    <a class="cartbtn" href="/#cafes">Ver cafés</a>
+    <a class="cartbtn" href="/?openCart=1" aria-label="Abrir carrito">Carrito <b id="cart-count" aria-live="polite">0</b></a>
   </header>
 
   <main>
@@ -63,12 +63,15 @@ import SpeedInsights from '@vercel/speed-insights/astro';
     <section class="closing-note"><img src="/opposite-transition-mark.svg" alt="" aria-hidden="true" /><p>Una taza. Muchas maneras de encontrarla.</p><a href="/#cafes">Explora la selección <span aria-hidden="true">→</span></a></section>
   </main>
 
-  <footer><p>{config.brand} · {config.shipping}</p></footer>
+  <footer><p>{config.brand} · {config.shipping}</p><a href="/privacidad">Privacidad</a></footer>
 
   <script is:inline>
     const topBar = document.querySelector('.top');
     const menuButton = document.querySelector('#nav-toggle');
     const nav = document.querySelector('#main-nav');
+    let cart = {};
+    try { cart = JSON.parse(localStorage.getItem('cart') || '{}'); } catch {}
+    document.querySelector('#cart-count').textContent = Object.values(cart).reduce((sum, quantity) => sum + (Number(quantity) || 0), 0);
     function closeMenu() { topBar.classList.remove('menu-open'); menuButton.setAttribute('aria-expanded', 'false'); menuButton.setAttribute('aria-label', 'Abrir menú'); }
     menuButton.addEventListener('click', () => {
       const isOpen = menuButton.getAttribute('aria-expanded') !== 'true';
@@ -81,6 +84,7 @@ import SpeedInsights from '@vercel/speed-insights/astro';
   </script>
 
   <style is:global>
+    .cartbtn b{display:inline-grid;place-items:center;min-width:1.4rem;margin-left:.25rem;padding:0 .35rem;border-radius:99px;background:var(--ink);color:var(--sun)}footer a{color:inherit}
     :root{--cream:#efe6d2;--ink:#1a120d;--orange:#f07b1d;--sun:#f7b32b;--teal:#7fd1c7;--night:#0c0c0c;--green:#0e6b4a;--pink:#e6007e}
     *{box-sizing:border-box;margin:0}body{font-family:Archivo,system-ui,sans-serif;background:var(--cream);color:var(--ink);line-height:1.6}h1,h2{font-family:"Source Serif 4",Georgia,serif;font-weight:800;line-height:1.05}a{color:inherit}:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
     .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:1rem;padding:.6rem 1.25rem;background:var(--night);color:var(--cream)}.logo{display:flex;align-items:center;text-decoration:none;white-space:nowrap}.logo img{display:block;width:8.1rem;height:auto}.top nav{position:absolute;left:50%;translate:-50% 0;display:flex;gap:1.25rem;margin:0;white-space:nowrap}.top nav a{text-decoration:none}.top nav a:hover,.top nav a[aria-current="page"]{color:var(--teal)}.top .cartbtn{margin-left:auto}.cartbtn{background:var(--sun);color:var(--ink);border-radius:99px;padding:.45rem 1rem;font:600 .9rem Archivo;text-decoration:none}.menu-toggle{display:none}

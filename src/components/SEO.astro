@@ -1,0 +1,50 @@
+---
+import { PUBLIC_SITE_URL } from 'astro:env/server';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  kind?: 'website' | 'product';
+  product?: { name: string; description: string; price: number; currency: string; available: boolean };
+}
+
+const { title, description, image, kind = 'website', product } = Astro.props;
+const siteBase = (PUBLIC_SITE_URL || Astro.site?.toString() || '').replace(/\/$/, '');
+const canonical = siteBase ? new URL(Astro.url.pathname, siteBase).href : undefined;
+const imageUrl = image ? (siteBase ? new URL(image, siteBase).href : image.startsWith('https://') ? image : undefined) : undefined;
+const schema = product && kind === 'product'
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      description: product.description,
+      ...(imageUrl ? { image: imageUrl } : {}),
+      brand: { '@type': 'Brand', name: 'ØPPOSITE' },
+      offers: {
+        '@type': 'Offer',
+        priceCurrency: product.currency,
+        price: product.price,
+        availability: `https://schema.org/${product.available ? 'PreOrder' : 'OutOfStock'}`,
+        ...(canonical ? { url: canonical } : {}),
+      },
+    }
+  : kind === 'website' && canonical
+    ? { '@context': 'https://schema.org', '@type': 'WebSite', name: 'ØPPOSITE', url: canonical }
+    : undefined;
+const schemaJson = schema ? JSON.stringify(schema).replace(/</g, '\\u003c') : undefined;
+---
+<title>{title}</title>
+<meta name="description" content={description} />
+{canonical && <link rel="canonical" href={canonical} />}
+<meta property="og:site_name" content="ØPPOSITE" />
+<meta property="og:type" content={kind === 'product' ? 'product' : 'website'} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+{canonical && <meta property="og:url" content={canonical} />}
+{imageUrl && <meta property="og:image" content={imageUrl} />}
+<meta name="twitter:card" content={imageUrl ? 'summary_large_image' : 'summary'} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+{imageUrl && <meta name="twitter:image" content={imageUrl} />}
+{schemaJson && <script type="application/ld+json" set:html={schemaJson} />}

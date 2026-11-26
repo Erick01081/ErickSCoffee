@@ -1,12 +1,19 @@
 ---
 import { products } from '../data/products';
 import { config } from '../data/config';
-import { colombianDepartments, commonMunicipalities } from '../data/locations';
+import { colombianDepartments, commonMunicipalities, shippingSummary } from '../data/locations';
+import { formatDate } from '../data/config';
 import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
+import SEO from '../components/SEO.astro';
+import ResponsiveImage from '../components/ResponsiveImage.astro';
 const cop = (n: number) => '$' + n.toLocaleString('es-CO');
 const cafes = products.filter(p => p.category === 'cafe' && !['bourbon', 'sl28'].includes(p.id));
+const availableCafeCount = cafes.filter(p => p.available !== false).length;
+const cafeCount = availableCafeCount === 1 ? 'Un café' : `${new Intl.NumberFormat('es-CO').format(availableCafeCount)} cafés`;
+const shippingStartLabel = formatDate(config.shippingStartsAt, { day: 'numeric', month: 'long' });
+const shippingEndLabel = formatDate(config.shippingEndsAt, { day: 'numeric', month: 'long', year: 'numeric' });
 const metodos = products.filter(p => p.category === 'metodo');
 const filtros = products.filter(p => p.category === 'filtro');
 ---
@@ -16,8 +23,7 @@ const filtros = products.filter(p => p.category === 'filtro');
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <title>Preventa de café · {config.brand}</title>
-  <meta name="description" content="Preventa de tres cafés de especialidad del Huila, disponibles en bolsas de 250 g y 340 g." />
+  <SEO title={`Café de especialidad · ${config.brand}`} description={`Compra ${cafeCount.toLowerCase()} de especialidad del Huila, en bolsas de 250 g y 340 g.`} image="/img/ombligon-served.webp" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,600..800;1,8..60,400&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -40,10 +46,10 @@ const filtros = products.filter(p => p.category === 'filtro');
       <div class="sunburst" aria-hidden="true"></div>
       <div class="label hero-label">
         <p class="small">Café de especialidad · Colombia</p>
-        <h1>Preventa</h1>
+        <h1>Compra café</h1>
         <div class="rule"><i></i></div>
-        <p class="lead">Tres cafés del Huila en bolsas de 250 g o 340 g. Aparta el tuyo y sé parte de esta primera preventa.</p>
-        <p class="meta">{config.presaleEnd}</p>
+        <p class="lead">{cafeCount} de especialidad del Huila, disponible en bolsas de 250 g o 340 g. Elige tu café y pide el tuyo.</p>
+        <p class="meta" id="sale-status" role="status">Venta abierta · Compra en línea o por WhatsApp</p>
         <a class="btn" href="#cafes">Ver los cafés</a>
       </div>
     </section>
@@ -53,12 +59,13 @@ const filtros = products.filter(p => p.category === 'filtro');
       <div class="grid cafes">
         {cafes.map(p => (
           <article class={`card cafe ${p.theme}`}>
-            <div class="photo"><img src={p.img} alt={p.imageAlt || (p.gallery ? `${p.name} servido junto a su empaque` : `Bolsa de café ${p.name}`)} loading="lazy" /></div>
+            <div class="photo"><ResponsiveImage src={p.img} alt={p.imageAlt || (p.gallery ? `${p.name} servido junto a su empaque` : `Bolsa de café ${p.name}`)} sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 33vw" /></div>
             <div class="label">
               <p class="small">{p.tag}</p>
               <h3>{p.name}</h3>
               <div class="rule"><i></i></div>
               <dl>
+                <dt>Variedad</dt><dd>{p.variety || p.name}</dd>
                 <dt>Proceso</dt><dd>{p.process}</dd>
                 <dt>Productor</dt><dd>{p.producer}</dd>
                 <dt>Finca</dt><dd>{p.farm}</dd>
@@ -89,6 +96,7 @@ const filtros = products.filter(p => p.category === 'filtro');
           </article>
         ))}
       </div>
+      <p class="shipping-summary">{shippingSummary} El costo exacto aparece al indicar el destino.</p>
     </section>
 
     <section class="brand-intro" aria-labelledby="brand-intro-title">
@@ -105,10 +113,10 @@ const filtros = products.filter(p => p.category === 'filtro');
 
     <section class="presale-info">
       <div class="presale-copy">
-        <p class="small">Una preventa en lotes pequeños</p>
+        <p class="small">Café en lotes pequeños</p>
         <h2>10 kg de cada café</h2>
-        <p>Por ahora decidimos sacar 10 kg de cada café. Cuando completemos la preventa de uno, procesamos su tueste y preparamos el despacho.</p>
-        <p>Así tostamos según lo que se reservó. Los despachos están previstos para la primera semana de diciembre.</p>
+        <p>Disponemos de 10 kg por café. Cada pedido se prepara para que recibas café recién tostado; las unidades disponibles pueden agotarse.</p>
+        <p>Preparamos el tueste en lotes pequeños. Los despachos están previstos entre el {shippingStartLabel} y el {shippingEndLabel}.</p>
       </div>
       <div class="presale-mark" aria-hidden="true"><strong>10</strong><span>kg<br />por café</span></div>
     </section>
@@ -118,7 +126,7 @@ const filtros = products.filter(p => p.category === 'filtro');
       <div class="grid simple">
         {metodos.map(p => (
           <article class="card simple-card">
-            {p.img && <div class="product-photo"><img src={p.img} alt={p.name} loading="lazy" /></div>}
+            {p.img && <div class="product-photo"><ResponsiveImage src={p.img} alt={p.name} sizes="(max-width: 700px) 100vw, 33vw" /></div>}
             <h3>{p.name}</h3><p>{p.note}</p>
             <div class="buy"><span class="price">{cop(p.price)}</span>
             <button class="btn add" data-id={p.id}>Agregar</button></div>
@@ -132,7 +140,7 @@ const filtros = products.filter(p => p.category === 'filtro');
       <div class="grid simple">
         {filtros.map(p => (
           <article class="card simple-card">
-            {p.img && <div class="product-photo"><img src={p.img} alt={p.name} loading="lazy" /></div>}
+            {p.img && <div class="product-photo"><ResponsiveImage src={p.img} alt={p.name} sizes="(max-width: 700px) 100vw, 33vw" /></div>}
             <h3>{p.name}</h3><p>{p.note}</p>
             <div class="buy"><span class="price">{cop(p.price)}</span>
             <button class="btn add" data-id={p.id}>Agregar</button></div>
@@ -145,7 +153,7 @@ const filtros = products.filter(p => p.category === 'filtro');
   <footer class="site-footer">
     <div class="footer-top"><p>Algo distinto está por servirse.</p><a href="#cafes">Explora los cafés <span aria-hidden="true">↗</span></a></div>
     <a class="footer-wordmark" href="#top" aria-label="ØPPOSITE, volver al inicio">ØPPOSITE</a>
-    <div class="footer-bottom"><span>Colombia</span><a href="#top">Volver arriba <span aria-hidden="true">↑</span></a></div>
+    <div class="footer-bottom"><span>Colombia</span><a href="/privacidad">Privacidad</a><a href="#top">Volver arriba <span aria-hidden="true">↑</span></a></div>
   </footer>
 
   <dialog id="cart">
@@ -155,7 +163,8 @@ const filtros = products.filter(p => p.category === 'filtro');
     <div class="shipping-row"><span>Productos</span><strong id="subtotal">$0</strong></div>
     <div class="shipping-row"><span>Envío <small id="shipping-destination"></small></span><strong id="shipping-fee">—</strong></div>
     <div class="total"><span>Total</span><strong id="total">$0</strong></div>
-    <label>Nombre<input id="name" autocomplete="name" /></label>
+    <p class="privacy-intro">Antes de continuar, revisa el <a href="/privacidad" target="_blank" rel="noopener">aviso de privacidad</a> para conocer cómo usamos los datos de tu pedido.</p>
+    <label>Nombre<input id="name" autocomplete="name" required /></label>
     <label>Departamento / región<select id="department" autocomplete="address-level1" required>
       <option value="">Selecciona tu departamento</option>
       {colombianDepartments.map(department => <option value={department}>{department}</option>)}
@@ -166,12 +175,14 @@ const filtros = products.filter(p => p.category === 'filtro');
     <label>Dirección de entrega<input id="address" autocomplete="street-address" placeholder="Calle, carrera, número, apartamento" required /></label>
     <label>Teléfono<input id="phone" type="tel" inputmode="tel" autocomplete="tel" required /></label>
     <label>Cédula<input id="identification" inputmode="numeric" autocomplete="off" placeholder="Número de cédula" required /></label>
-    <label>Correo para el pago<input id="email" type="email" autocomplete="email" /></label>
+    <label>Correo para el pago<input id="email" type="email" autocomplete="email" required aria-describedby="email-help" /></label>
+    <small id="email-help" class="field-help">Obligatorio para crear el pago en Mercado Pago.</small>
     <fieldset class="shipping-pay">
       <legend>¿Cómo quieres pagar el envío?</legend>
       <label class="radio"><input type="radio" name="shipping-payment" value="prepaid" checked /> Pagar el envío ahora (se suma al total)</label>
       <label class="radio"><input type="radio" name="shipping-payment" value="on_delivery" /> Pagar el envío al recibir</label>
     </fieldset>
+    <label class="privacy-consent"><input id="privacy-consent" type="checkbox" required /> Leí y autorizo el tratamiento de mis datos para gestionar este pedido, según el <a href="/privacidad" target="_blank" rel="noopener">aviso de privacidad</a>.</label>
     <button class="btn wide" id="pay-mercadopago" disabled>Continuar a Mercado Pago</button>
     <p class="payment-note">El pago se procesa de forma segura con Mercado Pago. Envío: $6.000 en Bogotá D. C. y $15.000 en el resto del país; puedes sumarlo al total o pagarlo al recibir.</p>
     <p id="payment-error" class="payment-error" role="alert" hidden></p>
@@ -241,7 +252,8 @@ const filtros = products.filter(p => p.category === 'filtro');
       $('#total').textContent = fmt(total + (onDelivery ? 0 : (shipping || 0)));
       $('#count').textContent = count;
       $('#send').disabled = !ids.length;
-      $('#pay-mercadopago').disabled = !ids.length || shipping === null;
+      $('#pay-mercadopago').disabled = !ids.length || shipping === null || !$('#privacy-consent').checked;
+      $('#send').disabled = !ids.length;
     }
     document.addEventListener('click', e => {
       const add = e.target.closest('.add');
@@ -294,6 +306,7 @@ const filtros = products.filter(p => p.category === 'filtro');
           body: JSON.stringify({
             buyer,
             shippingPayment: shippingPayment(),
+            privacyConsent: $('#privacy-consent').checked,
             items: Object.keys(cart).filter(key => cart[key] > 0).map(key => ({ key, quantity: cart[key] })),
           }),
         });
@@ -315,14 +328,21 @@ const filtros = products.filter(p => p.category === 'filtro');
       const lines = ids.map(id => { const item = cartInfo(id); if (!item) return ''; const { product: p, size, grindName, price } = item; total += price * cart[id];
         return `• ${cart[id]} × ${p.name}${p.category === 'cafe' ? ` (${size} g, ${grindName})` : ''} — ${fmt(price * cart[id])}`; }).filter(Boolean);
       const shipping = destinationShipping();
-      const destination = departmentInput.value && cityInput.value.trim()
+      const destinationReady = departmentInput.value && cityInput.value.trim();
+      const destination = destinationReady
         ? `Destino indicado: ${cityInput.value.trim()}, ${departmentInput.value}`
-        : 'Destino y costo de envío: por acordar por WhatsApp';
-      const msg = `Hola, quiero hacer un pedido de preventa:\n${lines.join('\n')}\nSubtotal: ${fmt(total)}\n${destination}\nEnvío: ${shippingPayment() === 'on_delivery' ? 'lo pago al recibir' : 'lo pago anticipado'}\nQuedo atento para acordar el envío.`;
+        : 'Destino: por confirmar';
+      const shippingLine = shipping === null
+        ? 'Envío: costo y forma de pago por acordar según el destino.'
+        : shippingPayment() === 'on_delivery'
+          ? `Envío: ${fmt(shipping)}, por pagar al recibir. Total de productos: ${fmt(total)}.`
+          : `Envío: ${fmt(shipping)}, sumado al total. Total estimado: ${fmt(total + shipping)}.`;
+      const msg = `Hola, quiero hacer este pedido:\n${lines.join('\n')}\nSubtotal de productos: ${fmt(total)}\n${destination}\n${shippingLine}\nQuedo atento para confirmar el pedido.`;
       window.open(`https://wa.me/${config.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank');
     };
     departmentInput.addEventListener('change', render);
     document.querySelectorAll('input[name="shipping-payment"]').forEach(el => el.addEventListener('change', render));
+    $('#privacy-consent').addEventListener('change', render);
     cityInput.addEventListener('input', render);
     render();
     document.querySelectorAll('[data-size-picker]').forEach(select => select.addEventListener('change', () => {
@@ -401,6 +421,7 @@ const filtros = products.filter(p => p.category === 'filtro');
     .cafe.aji{--bg:#2A0A18;--accent:#D9A441}
     .cafe.sol .rule{color:var(--orange)} .cafe.arco .rule{color:var(--green)}
     .photo{position:relative;aspect-ratio:5/4;overflow:hidden;background:var(--bg)}
+    .photo picture{position:absolute;inset:0}
     .photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}
     .photo:after{content:"";position:absolute;inset:auto 0 0;height:14%;background:linear-gradient(to bottom,transparent,var(--bg));pointer-events:none}
     .cafe .label{margin:.75rem .75rem .75rem;position:relative;flex:1;display:flex;flex-direction:column}
@@ -433,6 +454,7 @@ const filtros = products.filter(p => p.category === 'filtro');
 
     .simple-card{display:flex;flex-direction:column;gap:.6rem;padding:1.5rem;border-radius:1.25rem;border:1.5px solid currentColor}
     .product-photo{width:9rem;height:9rem;flex:0 0 auto;margin:0 auto .7rem;border-radius:50%;overflow:hidden;background:#fff;padding:0}
+    .product-photo picture{display:block;width:100%;height:100%}
     .product-photo img{width:100%;height:100%;object-fit:contain;transform:scale(1.18)}
     @media (min-width:700px){.product-photo{width:15rem;height:15rem}}
     .simple-card h3{font-size:1.6rem}
@@ -449,7 +471,7 @@ const filtros = products.filter(p => p.category === 'filtro');
 
     footer{padding:2rem 1.25rem;text-align:center;font-size:.85rem;background:var(--night);color:var(--cream)}
 
-    dialog{margin:auto 0 auto auto;height:100dvh;max-height:none;width:min(26rem,100%);border:0;padding:1.5rem;background:var(--cream);color:var(--ink);overflow:auto}
+    dialog{position:fixed;inset:0 0 0 auto;margin:0;height:100dvh;max-height:none;width:min(26rem,100vw);max-width:100vw;box-sizing:border-box;border:0;padding:clamp(1rem,4vw,1.5rem);background:var(--cream);color:var(--ink);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain}
     dialog::backdrop{background:rgba(0,0,0,.6)}
     dialog[open]{animation:in .25s ease-out}
     @keyframes in{from{translate:100% 0}}
@@ -469,6 +491,7 @@ const filtros = products.filter(p => p.category === 'filtro');
     .shipping-pay{border:1px solid #0000002a;border-radius:.6rem;padding:.6rem .8rem;margin:.75rem 0;font-size:.9rem}.shipping-pay legend{font-weight:700;padding:0 .3rem}.shipping-pay .radio{display:flex;align-items:center;gap:.5rem;margin:.35rem 0;font-weight:400}.shipping-pay .radio input{width:auto;margin:0}
     .shipping-row{display:flex;justify-content:space-between;gap:1rem;margin:.5rem 0;font-size:.9rem}.shipping-row small{display:block;color:#62584c;font-size:.72rem;font-weight:400}
     .payment-note,.payment-error{margin:.65rem 0;font-size:.8rem;line-height:1.4}.payment-note{color:#4f463c}.payment-error{color:#9b0e1a;font-weight:700}.payment-error[hidden]{display:none}.whatsapp-order{margin-top:.65rem;background:transparent;color:var(--ink);border:1px solid var(--ink)}.whatsapp-order:hover{background:#0000000a}
+    .privacy-intro{margin:.8rem 0;padding:.7rem;border-left:3px solid var(--green);background:#ffffff70;font-size:.8rem;line-height:1.4}.privacy-intro a,.privacy-consent a{color:var(--green);font-weight:700}.field-help{display:block;margin:-.55rem 0 .75rem;font-size:.75rem;color:#62584c}.privacy-consent{display:flex!important;align-items:flex-start;gap:.55rem;padding:.7rem;border:1px solid #0000002a;border-radius:.6rem;font-size:.8rem!important;line-height:1.4}.privacy-consent input{width:auto!important;flex:0 0 auto;margin:.2rem 0 0!important}.privacy-consent a{display:inline}.shipping-summary{max-width:70rem;margin:1.25rem auto 0;padding:.8rem 1rem;border-left:3px solid var(--sun);background:#fff8;color:#40372e;font-size:.85rem}.reserve:disabled{opacity:.55;cursor:not-allowed}
     .fine{font-size:.78rem;margin-top:.8rem;text-align:center}
     @media (max-width:650px){.top{gap:.55rem;padding:.6rem .7rem}.logo img{width:6.7rem}.top nav{display:none;position:absolute;left:0;right:0;top:100%;translate:0 0;width:100%;flex-direction:column;gap:0;padding:.4rem 1rem .8rem;background:var(--night);white-space:normal}.top.menu-open nav{display:flex}.top nav a{padding:.75rem .25rem;font-size:.95rem;border-top:1px solid #efe6d233}.top .cartbtn{margin-left:auto;padding:.4rem .7rem;font-size:.78rem;white-space:nowrap}.menu-toggle{display:grid;place-content:center;gap:4px;width:2.2rem;height:2.2rem;flex:0 0 auto;border:1px solid #efe6d255;border-radius:50%;background:transparent;color:var(--cream);cursor:pointer}.menu-toggle span{display:block;width:1rem;height:2px;background:currentColor;transition:transform .2s,opacity .2s}.top.menu-open .menu-toggle span:first-child{transform:translateY(6px) rotate(45deg)}.top.menu-open .menu-toggle span:nth-child(2){opacity:0}.top.menu-open .menu-toggle span:last-child{transform:translateY(-6px) rotate(-45deg)}}
     @media (max-width:560px){.presale-info{padding-block:3rem;align-items:flex-start}.presale-mark{width:6rem;height:6rem}.presale-mark strong{font-size:2.8rem}.presale-mark span{font-size:.65rem}}

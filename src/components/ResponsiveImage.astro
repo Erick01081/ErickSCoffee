@@ -1,0 +1,20 @@
+---
+import variants from '../data/image-variants';
+
+interface Props {
+  src: string;
+  alt: string;
+  loading?: 'eager' | 'lazy';
+  sizes?: string;
+  class?: string;
+  width?: number;
+  height?: number;
+}
+
+const { src, alt, loading = 'lazy', sizes = '(max-width: 700px) 100vw, 50vw', class: className, width, height } = Astro.props;
+const responsive = variants[src];
+---
+{responsive ? <picture class={className}>
+  <source type="image/webp" srcset={responsive.srcset} sizes={sizes} />
+  <img class={className} src={src} alt={alt} loading={loading} decoding="async" width={responsive.width} height={responsive.height} />
+</picture> : <img src={src} alt={alt} loading={loading} decoding="async" width={width} height={height} class={className} />}

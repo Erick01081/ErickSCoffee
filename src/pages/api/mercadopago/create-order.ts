@@ -8,6 +8,7 @@ import {
 } from 'astro:env/server';
 import { randomUUID } from 'node:crypto';
 import { products } from '../../../data/products';
+import { config } from '../../../data/config';
 import { colombianDepartments, shippingPrice } from '../../../data/locations';
 
 export const prerender = false;
@@ -73,6 +74,7 @@ export const POST: APIRoute = async ({ request, url }) => {
   let input: {
     items?: Array<{ key?: unknown; quantity?: unknown }>;
     shippingPayment?: unknown;
+    privacyConsent?: unknown;
     buyer?: {
       name?: unknown;
       email?: unknown;
@@ -87,6 +89,10 @@ export const POST: APIRoute = async ({ request, url }) => {
     input = await request.json();
   } catch {
     return json({ error: 'No pudimos leer el pedido. Vuelve a intentarlo.' }, 400);
+  }
+
+  if (input.privacyConsent !== true) {
+    return json({ error: 'Lee el aviso de privacidad y autoriza el uso de tus datos para continuar.' }, 400);
   }
 
   const name = typeof input.buyer?.name === 'string' ? input.buyer.name.trim().slice(0, 100) : '';
@@ -186,6 +192,9 @@ export const POST: APIRoute = async ({ request, url }) => {
     shippingPayment,
     shippingFee: Number(deliveryFee),
     shippingDueOnDelivery: shippingPayment === 'on_delivery' ? Number(deliveryFee) : 0,
+    privacyConsent: true,
+    privacyPolicyVersion: config.privacyPolicyVersion,
+    privacyConsentAt: new Date().toISOString(),
     total,
   };
 
