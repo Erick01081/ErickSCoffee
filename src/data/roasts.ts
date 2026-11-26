@@ -25,7 +25,6 @@ export const roasts: Record<string, RoastProfile> = {
       { name: 'Maillard', start: 309, end: 498, time: '3:09', pct: 35 },
       { name: 'Desarrollo', start: 498, end: 533, time: '0:35', pct: 6 },
     ],
-    note: 'Perfil adaptado de la captura del registro. Los puntos intermedios de las curvas se reconstruyeron visualmente; las fases, eventos, métricas y cambios de controles se transcribieron de la gráfica.',
     events: [
       { t: 309, temp: 165.67, label: 'Amarillo', curve: 'ibts', dx: -14, dy: 70, anchor: 'end' },
       { t: 498, temp: 190.4, label: 'Primer crack', curve: 'ibts', dx: -14, dy: -46, anchor: 'end' },
