@@ -4,8 +4,11 @@ import { config } from '../../data/config';
 import PageTransition from '../../components/PageTransition.astro';
 import RoastProfile from '../../components/RoastProfile.astro';
 import { roasts } from '../../data/roasts';
+import { shippingSummary } from '../../data/locations';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
+import SEO from '../../components/SEO.astro';
+import ResponsiveImage from '../../components/ResponsiveImage.astro';
 
 export function getStaticPaths() {
   return products.filter(p => p.category === 'cafe').map(p => ({ params: { slug: p.id }, props: { coffee: p } }));
@@ -22,8 +25,7 @@ const roast = roasts[coffee.id];
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <title>{coffee.name} · {config.brand}</title>
-  <meta name="description" content={`Conoce ${coffee.name}: su origen, por qué lo elegimos y qué esperamos de esta taza.`} />
+  <SEO title={`${coffee.name} · ${config.brand}`} description={`Conoce ${coffee.name}: su origen, variedad, proceso y qué esperamos de esta taza.`} image={coffee.img} kind="product" product={{ name: coffee.name, description: `${coffee.variety || coffee.name} · ${coffee.process} · ${coffee.origin}`, price: coffee.price, currency: config.currency, available: coffee.available !== false }} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,600..800;1,8..60,400&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet" />
@@ -36,36 +38,41 @@ const roast = roasts[coffee.id];
     <a class="logo" href="/#top" aria-label={config.brand}><img src="/opposite-logo.svg" alt="ØPPOSITE" /></a>
     <button class="menu-toggle" id="nav-toggle" aria-label="Abrir menú" aria-controls="main-nav" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav id="main-nav"><a href="/#cafes">Cafés</a><a href="/#metodos">Métodos</a><a href="/#filtros">Filtros</a><a href="/nosotros">Nosotros</a></nav>
-    <a class="cartbtn" href="/#cafes">Ver catálogo</a>
+    <a class="cartbtn" href="/?openCart=1" aria-label="Abrir carrito">Carrito <b id="cart-count" aria-live="polite">0</b></a>
   </header>
 
   <main>
     <a class="back" href="/#cafes">← Volver a los cafés</a>
     <section class={`coffee-hero ${coffee.theme}`}>
       <div class="coffee-gallery" role="region" aria-roledescription="carrusel" aria-label={`Galería de ${coffee.name}`}>
-        <div class="coffee-image" id="coffee-gallery-track">
-          {gallery.map((image, index) => <figure class="coffee-slide" aria-hidden={index !== 0}>
-            <button class="gallery-open" type="button" aria-label={`Ampliar imagen de ${coffee.name}`}>
-              <img class:list={{ 'contain-image': coffee.galleryContain?.includes(index) }} src={image} alt={coffee.galleryAlts?.[index] || (index === 0 && coffee.imageAlt ? coffee.imageAlt : index === 0 && coffee.gallery?.length ? `${coffee.name} servido junto a su empaque` : `Empaque de ${coffee.name}`)} loading={index === 0 ? 'eager' : 'lazy'} />
+        <div class="coffee-image" id="coffee-gallery-track" tabindex="0" aria-label={`Galería de ${coffee.name}`}>
+          {gallery.map((image, index) => <figure class="coffee-slide" role="group" aria-roledescription="diapositiva" aria-label={`Imagen ${index + 1} de ${gallery.length}`} aria-hidden={index !== 0} inert={index !== 0}>
+            <button class="gallery-open" type="button" aria-label={`Ampliar ${coffee.galleryAlts?.[index] || `${coffee.name}, imagen ${index + 1}`}`}>
+              <ResponsiveImage class:list={{ 'contain-image': coffee.galleryContain?.includes(index) }} src={image} alt={coffee.galleryAlts?.[index] || (index === 0 && coffee.imageAlt ? coffee.imageAlt : index === 0 && coffee.gallery?.length ? `${coffee.name} servido junto a su empaque` : `Empaque de ${coffee.name}`)} loading={index === 0 ? 'eager' : 'lazy'} sizes="(max-width: 800px) 100vw, 55vw" />
             </button>
           </figure>)}
         </div>
         {gallery.length > 1 && <>
-          <button class="gallery-arrow gallery-prev" type="button" aria-label="Ver imagen anterior">‹</button>
-          <button class="gallery-arrow gallery-next" type="button" aria-label="Ver imagen siguiente">›</button>
+          <button class="gallery-arrow gallery-prev" type="button" aria-label="Ver imagen anterior" aria-controls="coffee-gallery-track">‹</button>
+          <button class="gallery-arrow gallery-next" type="button" aria-label="Ver imagen siguiente" aria-controls="coffee-gallery-track">›</button>
           <div class="gallery-dots" aria-label="Elegir imagen">
-            {gallery.map((_, index) => <button type="button" class:list={['gallery-dot', { active: index === 0 }]} aria-label={`Ver imagen ${index + 1}`} aria-current={index === 0 ? 'true' : undefined}></button>)}
+            {gallery.map((_, index) => <button type="button" class:list={['gallery-dot', { active: index === 0 }]} aria-label={`Ver imagen ${index + 1}`} aria-controls="coffee-gallery-track" aria-current={index === 0 ? 'true' : undefined}></button>)}
           </div>
         </>}
+        <span class="sr-only" id="gallery-status" aria-live="polite">Imagen 1 de {gallery.length}</span>
       </div>
       <div class="coffee-copy">
         <span class="coffee-mark" aria-hidden="true" style={`--coffee-mark:${coffee.logoColor || '#fff'}`}></span>
         <p class="small">{coffee.tag}</p>
         <h1>{coffee.name}</h1>
-        <p class="origin">{coffee.origin}</p>
         <div class="rule"><i></i></div>
-        <p class="process"><strong>Proceso</strong><br />{coffee.process}</p>
-        <p><strong>Productor</strong><br />{coffee.producer} · {coffee.farm}</p>
+        <dl class="coffee-facts">
+          <div><dt>Variedad</dt><dd>{coffee.variety || coffee.name}</dd></div>
+          <div><dt>Proceso</dt><dd>{coffee.process}</dd></div>
+          <div><dt>Origen</dt><dd>{coffee.origin?.split('·')[0].trim()}</dd></div>
+          {coffee.altitude && <div><dt>Altitud</dt><dd>{coffee.altitude.toLocaleString('es-CO')} msnm</dd></div>}
+          <div class="facts-wide"><dt>Productor · finca</dt><dd>{coffee.producer} · {coffee.farm}</dd></div>
+        </dl>
         {coffee.available !== false && <label class="size-picker" for="coffee-size">Presentación
           <select id="coffee-size">
             <option value="250" data-price={coffee.price}>250 g · {cop(coffee.price)}</option>
@@ -84,6 +91,7 @@ const roast = roasts[coffee.id];
         {coffee.available !== false
           ? <button class="btn add-coffee" id="add-coffee" type="button" data-id={coffee.id}>Agregar bolsa de 250 g al carrito</button>
           : <p class="coming-soon" role="status">Próximamente</p>}
+        {coffee.available !== false && <p class="shipping-summary">{shippingSummary}</p>}
         <a class="catalog-link" href="/#cafes">Seguir viendo cafés</a>
       </div>
     </section>
@@ -112,11 +120,11 @@ const roast = roasts[coffee.id];
     </aside>
 
     <section class="next-coffee">
-      <p class="small">También en esta preventa</p>
+      <p class="small">También en la tienda</p>
       <a href="/#cafes">Descubre los otros cafés →</a>
     </section>
   </main>
-  <footer><p>{config.brand} · {config.shipping}</p></footer>
+  <footer><p>{config.brand} · {config.shipping}</p><a href="/privacidad">Privacidad</a></footer>
   <dialog class="photo-lightbox" aria-label={`Imagen ampliada de ${coffee.name}`}>
     <button class="lightbox-close" type="button" aria-label="Cerrar imagen ampliada">×</button>
     <div class="lightbox-view"><img class="lightbox-image" alt="" /></div>
@@ -165,21 +173,31 @@ const roast = roasts[coffee.id];
       function showSlide(index) {
         activeSlide = (index + slides.length) % slides.length;
         galleryTrack.scrollTo({ left: activeSlide * galleryTrack.clientWidth, behavior: 'smooth' });
-        slides.forEach((slide, i) => slide.setAttribute('aria-hidden', String(i !== activeSlide)));
+        slides.forEach((slide, i) => { slide.setAttribute('aria-hidden', String(i !== activeSlide)); slide.toggleAttribute('inert', i !== activeSlide); });
         dots.forEach((dot, i) => { dot.classList.toggle('active', i === activeSlide); if (i === activeSlide) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current'); });
+        document.querySelector('#gallery-status').textContent = `Imagen ${activeSlide + 1} de ${slides.length}`;
       }
       document.querySelector('.gallery-prev')?.addEventListener('click', () => showSlide(activeSlide - 1));
       document.querySelector('.gallery-next')?.addEventListener('click', () => showSlide(activeSlide + 1));
       dots.forEach((dot, i) => dot.addEventListener('click', () => showSlide(i)));
+      galleryTrack.addEventListener('keydown', event => {
+        if (event.key === 'ArrowRight') { event.preventDefault(); showSlide(activeSlide + 1); }
+        if (event.key === 'ArrowLeft') { event.preventDefault(); showSlide(activeSlide - 1); }
+      });
       galleryTrack.addEventListener('scroll', () => {
         const index = Math.round(galleryTrack.scrollLeft / galleryTrack.clientWidth);
-        if (index !== activeSlide) { activeSlide = index; slides.forEach((slide, i) => slide.setAttribute('aria-hidden', String(i !== index))); dots.forEach((dot, i) => { dot.classList.toggle('active', i === index); if (i === index) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current'); }); }
+        if (index !== activeSlide) showSlide(index);
       }, { passive: true });
     }
     const sizePicker = document.querySelector('#coffee-size');
     const grindPicker = document.querySelector('#coffee-grind');
     const coffeePrice = document.querySelector('#coffee-price');
     const addCoffee = document.querySelector('#add-coffee');
+    const cartCount = document.querySelector('#cart-count');
+    const updateCartCount = cart => { cartCount.textContent = Object.values(cart).reduce((sum, quantity) => sum + (Number(quantity) || 0), 0); };
+    let currentCart = {};
+    try { currentCart = JSON.parse(localStorage.getItem('cart') || '{}'); } catch {}
+    updateCartCount(currentCart);
     sizePicker?.addEventListener('change', () => {
       const size = sizePicker.value;
       const price = Number(sizePicker.selectedOptions[0].dataset.price);
@@ -192,7 +210,10 @@ const roast = roasts[coffee.id];
       const id = `${addCoffee.dataset.id}::${sizePicker.value}::${grindPicker.value}`;
       cart[id] = (cart[id] || 0) + 1;
       try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
-      window.location.href = '/?openCart=1#cafes';
+      updateCartCount(cart);
+      const originalText = `Agregar bolsa de ${sizePicker.value} g al carrito`;
+      addCoffee.textContent = 'Agregado al carrito';
+      window.setTimeout(() => { if (!addCoffee.disabled) addCoffee.textContent = originalText; }, 1200);
     });
     const topBar = document.querySelector('.top');
     const menuButton = document.querySelector('#nav-toggle');
@@ -209,16 +230,20 @@ const roast = roasts[coffee.id];
   </script>
 
   <style is:global>
+    .cartbtn b{display:inline-grid;place-items:center;min-width:1.4rem;margin-left:.25rem;padding:0 .35rem;border-radius:99px;background:var(--ink);color:var(--sun)}
+    .coffee-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem 1rem;margin:.75rem 0 1.2rem}.coffee-facts div{min-width:0}.coffee-facts dt{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.72}.coffee-facts dd{font-size:.9rem;font-weight:600;overflow-wrap:anywhere}.coffee-facts .facts-wide{grid-column:1/-1}.coffee-hero.aji .coffee-facts dt{color:#D9A441}.shipping-summary{margin-top:.8rem;font-size:.78rem;line-height:1.4;opacity:.82}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.btn:disabled{opacity:.55;cursor:not-allowed}
     :root{--cream:#efe6d2;--ink:#1a120d;--orange:#f07b1d;--sun:#f7b32b;--teal:#7fd1c7;--pink:#e6007e;--green:#0e6b4a;--wine:#9b0e1a;--night:#0c0c0c;--purple:#6a1b7a}
     *{box-sizing:border-box;margin:0}body{font-family:Archivo,system-ui,sans-serif;background:var(--cream);color:var(--ink);line-height:1.55}h1,h2{font-family:"Source Serif 4",Georgia,serif;font-weight:800;line-height:1.05}a{color:inherit}:focus-visible{outline:3px solid var(--pink);outline-offset:3px}
     .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:1rem;padding:.6rem 1.25rem;background:var(--night);color:var(--cream)}.logo{display:flex;align-items:center;text-decoration:none;white-space:nowrap}.logo img{display:block;width:8.1rem;height:auto}.top nav{position:absolute;left:50%;translate:-50% 0;display:flex;gap:1.25rem;margin:0;white-space:nowrap}.top nav a{text-decoration:none}.top .cartbtn{margin-left:auto}.cartbtn{background:var(--sun);color:var(--ink);border:0;border-radius:99px;padding:.45rem 1rem;font:600 .9rem Archivo;text-decoration:none}.menu-toggle{display:none}
     main{max-width:72rem;margin:auto;padding:1.25rem}.back{display:inline-block;margin:1.25rem 0;text-decoration:none;font-weight:600}.coffee-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2.5rem;align-items:center;padding:clamp(1.25rem,5vw,4rem);border-radius:1.5rem;background:var(--orange)}.coffee-hero.arco{background:var(--night);color:var(--cream)}.coffee-hero.olas{background:var(--wine);color:var(--cream)}.coffee-hero.aji{background:#2A0A18;color:#F4E6D8}
-    .coffee-gallery{position:relative;min-width:0}.coffee-image{display:flex;height:clamp(18rem,42vw,31rem);border-radius:1rem;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;background:var(--cream);overscroll-behavior-x:contain}.coffee-image::-webkit-scrollbar{display:none}.coffee-slide{position:relative;flex:0 0 100%;min-width:100%;height:100%;scroll-snap-align:start}.coffee-slide img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}.coffee-slide img.contain-image{object-fit:contain;background:#2A0A18}.gallery-arrow{position:absolute;top:50%;translate:0 -50%;display:grid;place-items:center;width:2.6rem;height:2.6rem;border:0;border-radius:50%;background:rgba(12,12,12,.78);color:white;font:2rem/1 Archivo;cursor:pointer}.gallery-prev{left:.75rem}.gallery-next{right:.75rem}.gallery-dots{position:absolute;bottom:.8rem;left:50%;translate:-50% 0;display:flex;gap:.45rem;padding:.35rem .55rem;border-radius:99px;background:rgba(12,12,12,.62)}.gallery-dot{width:.5rem;height:.5rem;padding:0;border:0;border-radius:50%;background:#ffffff80;cursor:pointer}.gallery-dot.active{background:white;transform:scale(1.2)}.coffee-mark{display:block;width:3rem;height:3rem;margin-bottom:.7rem;background:var(--coffee-mark);mask:url('/opposite-mark.svg') center/contain no-repeat;-webkit-mask:url('/opposite-mark.svg') center/contain no-repeat}.coffee-copy .small,.story .small,.next-coffee .small{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--green)}.coffee-hero.sol .coffee-copy .small{color:var(--ink)}.coffee-hero.arco .small,.coffee-hero.olas .small,.coffee-hero.aji .small{color:#D9A441}h1{font-size:clamp(2.8rem,6vw,5rem);margin:.6rem 0}.origin{font-size:.9rem;font-weight:600}.rule{display:flex;align-items:center;gap:.6rem;margin:1rem 0;color:var(--purple)}.rule:before,.rule:after{content:"";height:1px;flex:1;background:currentColor}.rule i{width:.5rem;height:.5rem;background:currentColor;transform:rotate(45deg)}.coffee-hero.aji .rule{color:#D9A441}    .coffee-copy>p:not(.small){margin:.75rem 0}.price{font:800 1.6rem "Source Serif 4",Georgia,serif;margin:1.25rem 0!important}.price small{font:400 .8rem Archivo,sans-serif}.coming-soon{color:var(--sun);font-weight:700;letter-spacing:.08em;text-transform:uppercase}.size-picker,.grind-picker{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.size-picker select,.grind-picker select{max-width:70%;padding:.65rem .8rem;border:1px solid currentColor;border-radius:.6rem;background:var(--cream);color:var(--ink);font:600 .9rem Archivo;letter-spacing:normal;text-transform:none}.btn{display:inline-block;background:var(--ink);color:var(--cream);border:0;border-radius:99px;padding:.75rem 1.35rem;font:600 .95rem Archivo;text-decoration:none}.coffee-hero.arco .btn,.coffee-hero.olas .btn,.coffee-hero.aji .btn{background:#D9A441;color:#2A0A18}
+    .coffee-gallery{position:relative;min-width:0}.coffee-image{display:flex;height:clamp(18rem,42vw,31rem);border-radius:1rem;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;background:var(--cream);overscroll-behavior-x:contain}.coffee-image::-webkit-scrollbar{display:none}.coffee-slide{position:relative;flex:0 0 100%;min-width:100%;height:100%;scroll-snap-align:start}.gallery-open{display:block;width:100%;height:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.coffee-slide picture{display:block;width:100%;height:100%}.coffee-slide img{display:block;width:100%;height:100%;object-fit:cover;object-position:center}.coffee-slide img.contain-image{object-fit:contain;background:#2A0A18}.gallery-arrow{position:absolute;top:50%;translate:0 -50%;display:grid;place-items:center;width:2.6rem;height:2.6rem;border:0;border-radius:50%;background:rgba(12,12,12,.78);color:white;font:2rem/1 Archivo;cursor:pointer}.gallery-prev{left:.75rem}.gallery-next{right:.75rem}.gallery-dots{position:absolute;bottom:.8rem;left:50%;translate:-50% 0;display:flex;gap:.45rem;padding:.35rem .55rem;border-radius:99px;background:rgba(12,12,12,.62)}.gallery-dot{width:.5rem;height:.5rem;padding:0;border:0;border-radius:50%;background:#ffffff80;cursor:pointer}.gallery-dot.active{background:white;transform:scale(1.2)}.coffee-mark{display:block;width:3rem;height:3rem;margin-bottom:.7rem;background:var(--coffee-mark);mask:url('/opposite-mark.svg') center/contain no-repeat;-webkit-mask:url('/opposite-mark.svg') center/contain no-repeat}.coffee-copy .small,.story .small,.next-coffee .small{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--green)}.coffee-hero.sol .coffee-copy .small{color:var(--ink)}.coffee-hero.arco .small,.coffee-hero.olas .small,.coffee-hero.aji .small{color:#D9A441}h1{font-size:clamp(2.8rem,6vw,5rem);margin:.6rem 0}.origin{font-size:.9rem;font-weight:600}.rule{display:flex;align-items:center;gap:.6rem;margin:1rem 0;color:var(--purple)}.rule:before,.rule:after{content:"";height:1px;flex:1;background:currentColor}.rule i{width:.5rem;height:.5rem;background:currentColor;transform:rotate(45deg)}.coffee-hero.aji .rule{color:#D9A441}    .coffee-copy>p:not(.small){margin:.75rem 0}.price{font:800 1.6rem "Source Serif 4",Georgia,serif;margin:1.25rem 0!important}.price small{font:400 .8rem Archivo,sans-serif}.coming-soon{color:var(--sun);font-weight:700;letter-spacing:.08em;text-transform:uppercase}.size-picker,.grind-picker{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:1rem;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.size-picker select,.grind-picker select{max-width:70%;padding:.65rem .8rem;border:1px solid currentColor;border-radius:.6rem;background:var(--cream);color:var(--ink);font:600 .9rem Archivo;letter-spacing:normal;text-transform:none}.btn{display:inline-block;background:var(--ink);color:var(--cream);border:0;border-radius:99px;padding:.75rem 1.35rem;font:600 .95rem Archivo;text-decoration:none}.coffee-hero.arco .btn,.coffee-hero.olas .btn,.coffee-hero.aji .btn{background:#D9A441;color:#2A0A18}
     .btn{cursor:pointer}.catalog-link{display:inline-block;margin-left:1rem;font-weight:600;text-decoration:none}.catalog-link:hover{text-decoration:underline;text-underline-offset:.2em}
     .gallery-open{display:block;width:100%;height:100%;padding:0;border:0;background:transparent;cursor:zoom-in}.gallery-open:focus-visible{outline:3px solid var(--sun);outline-offset:-5px}
     .photo-lightbox{position:fixed;inset:0;margin:auto;width:min(96vw,90rem);height:min(96dvh,60rem);max-width:none;max-height:none;padding:3.5rem 1rem 5rem;border:0;border-radius:1rem;background:rgba(12,12,12,.97);color:white;overflow:hidden}.photo-lightbox::backdrop{background:rgba(0,0,0,.82)}.lightbox-view{width:100%;height:100%;overflow:auto;display:grid;place-items:center;overscroll-behavior:contain}.lightbox-image{display:block;width:auto;height:auto;max-width:none;max-height:none;object-fit:contain}.lightbox-close{position:absolute;top:.8rem;right:1rem;width:2.6rem;height:2.6rem;border:1px solid #ffffff70;border-radius:50%;background:#ffffff14;color:white;font:2rem/1 Archivo;cursor:pointer}.lightbox-controls{position:absolute;bottom:.8rem;left:50%;translate:-50% 0;display:flex;align-items:center;gap:.4rem;padding:.35rem;border:1px solid #ffffff40;border-radius:99px;background:#171411}.lightbox-controls button{min-width:2.5rem;height:2.5rem;padding:0 .7rem;border:0;border-radius:99px;background:transparent;color:white;font:600 1.1rem Archivo;cursor:pointer}.lightbox-controls button:hover{background:#ffffff20}.lightbox-controls button[data-zoom="reset"]{font-size:.8rem}
     .story{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;padding:4rem 0}.story article{padding:clamp(1.5rem,4vw,2.5rem);border:1.5px solid var(--ink);border-radius:1.25rem}.story h2{font-size:clamp(1.7rem,3vw,2.4rem);margin:.5rem 0 1rem}.story article>p:last-child{max-width:55ch}.open-guide{display:flex;align-items:center;gap:1.5rem;padding:clamp(1.5rem,5vw,3rem);background:var(--teal);border-radius:1.25rem}.guide-mark{width:3.5rem;height:3.5rem;flex:0 0 3.5rem;background:var(--green);clip-path:polygon(50% 0,58% 33%,82% 18%,67% 42%,100% 50%,67% 58%,82% 82%,58% 67%,50% 100%,42% 67%,18% 82%,33% 58%,0 50%,33% 42%,18% 18%,42% 33%)}.open-guide h2{font-size:clamp(1.5rem,3vw,2rem);margin-bottom:.65rem}.open-guide p{max-width:70ch}.next-coffee{display:flex;align-items:center;justify-content:space-between;padding:3rem 0}.next-coffee a{font:700 1.25rem "Source Serif 4",Georgia,serif}footer{padding:2rem 1.25rem;text-align:center;font-size:.85rem;background:var(--night);color:var(--cream)}
     @media(max-width:650px){.top{gap:.55rem;padding:.6rem .7rem}.logo img{width:6.7rem}.menu-toggle{display:grid;place-content:center;gap:4px;width:2.2rem;height:2.2rem;flex:0 0 auto;border:1px solid #efe6d255;border-radius:50%;background:transparent;color:var(--cream);cursor:pointer}.menu-toggle span{display:block;width:1rem;height:2px;background:currentColor;transition:transform .2s,opacity .2s}.top.menu-open .menu-toggle span:first-child{transform:translateY(6px) rotate(45deg)}.top.menu-open .menu-toggle span:nth-child(2){opacity:0}.top.menu-open .menu-toggle span:last-child{transform:translateY(-6px) rotate(-45deg)}.top nav{display:none;position:absolute;left:0;right:0;top:100%;translate:0 0;width:100%;flex-direction:column;gap:0;padding:.4rem 1rem .8rem;background:var(--night);white-space:normal}.top.menu-open nav{display:flex}.top nav a{padding:.75rem .25rem;font-size:.95rem;border-top:1px solid #efe6d233}.top .cartbtn{margin-left:auto;padding:.4rem .7rem;font-size:.78rem;white-space:nowrap}.coffee-hero{grid-template-columns:minmax(0,1fr);gap:1.5rem}.size-picker,.grind-picker{flex-direction:column;align-items:stretch;gap:.45rem}.size-picker select,.grind-picker select{width:100%;max-width:100%;min-width:0}.coffee-image{height:19rem}.story{grid-template-columns:1fr;padding:2.5rem 0}.next-coffee{align-items:flex-start;flex-direction:column;gap:.5rem}}
+    footer{display:flex;justify-content:center;align-items:center;gap:1.5rem}footer a{color:inherit}
+    @media(max-width:650px){.coffee-facts{gap:.55rem}.coffee-facts dd{font-size:.82rem}}
   </style>
 </body>
 </html>

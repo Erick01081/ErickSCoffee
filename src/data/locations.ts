@@ -17,7 +17,10 @@ export const commonMunicipalities = [
   'Sogamoso', 'Soledad', 'Tuluá', 'Tunja', 'Tumaco', 'Valledupar', 'Villavicencio', 'Yopal', 'Zipaquirá',
 ].sort((a, b) => a.localeCompare(b, 'es'));
 
+export const shippingSummary = 'Envío estimado: $6.000 en Bogotá D. C. y $15.000 en el resto del país.';
+export const shippingRates = { bogota: 6000, national: 15000 } as const;
+
 export function shippingPrice(department: string, municipality: string) {
   const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLocaleLowerCase('es');
-  return normalize(department) === normalize('Bogotá, D.C.') ? 6000 : 15000;
+  return normalize(department) === normalize('Bogotá, D.C.') ? shippingRates.bogota : shippingRates.national;
 }

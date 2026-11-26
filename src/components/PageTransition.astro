@@ -11,9 +11,16 @@
     if (sessionStorage.getItem(transitionKey) === '1') {
       sessionStorage.removeItem(transitionKey);
       transitionRoot.classList.add('transition-arriving');
-      requestAnimationFrame(() => requestAnimationFrame(() => transitionRoot.classList.remove('transition-arriving')));
+      window.setTimeout(() => transitionRoot.classList.remove('transition-arriving'), transitionMotion ? 0 : 420);
     }
   } catch {}
+
+  // Safari/Chrome pueden restaurar una página desde BFCache con la clase de salida puesta.
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    transitionRoot.classList.remove('transition-leaving', 'transition-arriving');
+    try { sessionStorage.removeItem(transitionKey); } catch {}
+  });
 
   document.addEventListener('click', event => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || transitionRoot.classList.contains('transition-leaving')) return;
@@ -27,6 +34,8 @@
     try { sessionStorage.setItem(transitionKey, '1'); } catch {}
     transitionRoot.classList.add('transition-leaving');
     window.setTimeout(() => location.assign(destination.href), transitionMotion ? 0 : 320);
+    // Si la navegación se interrumpe o el destino tarda, evita dejar el velo pegado.
+    window.setTimeout(() => transitionRoot.classList.remove('transition-leaving'), 1800);
   }, true);
 </script>
 

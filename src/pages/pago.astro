@@ -3,6 +3,7 @@ import { config } from '../data/config';
 import PageTransition from '../components/PageTransition.astro';
 import Analytics from '@vercel/analytics/astro';
 import SpeedInsights from '@vercel/speed-insights/astro';
+import SEO from '../components/SEO.astro';
 ---
 <!doctype html>
 <html lang="es">
@@ -10,7 +11,7 @@ import SpeedInsights from '@vercel/speed-insights/astro';
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  <title>Estado del pago · {config.brand}</title>
+  <SEO title={`Estado del pago · ${config.brand}`} description={`Consulta el estado de tu pedido en ${config.brand}.`} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700;800&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet" />
